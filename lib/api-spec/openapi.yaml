@@ -1,22 +1,22 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Snake & Ladder Game API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: games
+    description: Game room operations
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +24,151 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /games:
+    post:
+      operationId: createGame
+      tags: [games]
+      summary: Create a new game room
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GameInput"
+      responses:
+        "201":
+          description: Game created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Game"
+  /games/{roomCode}:
+    get:
+      operationId: getGame
+      tags: [games]
+      summary: Get game state
+      parameters:
+        - name: roomCode
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Game state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Game"
+        "404":
+          description: Game not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /games/{roomCode}/join:
+    post:
+      operationId: joinGame
+      tags: [games]
+      summary: Join a game room
+      parameters:
+        - name: roomCode
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JoinInput"
+      responses:
+        "200":
+          description: Joined game
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JoinResult"
+        "400":
+          description: Cannot join
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Game not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
         status:
           type: string
-      required:
-        - status
-
+    GameInput:
+      type: object
+      required: [hostName, level]
+      properties:
+        hostName:
+          type: string
+        level:
+          type: integer
+    JoinInput:
+      type: object
+      required: [playerName]
+      properties:
+        playerName:
+          type: string
+    JoinResult:
+      type: object
+      required: [playerId, roomCode]
+      properties:
+        playerId:
+          type: string
+        roomCode:
+          type: string
+    Player:
+      type: object
+      required: [id, name, position, score, color]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        position:
+          type: integer
+        score:
+          type: integer
+        color:
+          type: string
+        bonusRolls:
+          type: integer
+    Game:
+      type: object
+      required: [roomCode, level, status, players, currentPlayerIndex]
+      properties:
+        roomCode:
+          type: string
+        level:
+          type: integer
+        status:
+          type: string
+        players:
+          type: array
+          items:
+            $ref: "#/components/schemas/Player"
+        currentPlayerIndex:
+          type: integer
+        winnerId:
+          type: ["string", "null"]
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
