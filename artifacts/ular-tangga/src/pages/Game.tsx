@@ -55,6 +55,7 @@ export default function Game() {
   const [copied, setCopied] = useState(false);
   const [connected, setConnected] = useState(false);
   const usedTextIds = useRef<string[]>([]);
+  const questionShownRef = useRef(false);
   const socketRef = useRef(getSocket());
 
   const roomCode = params.roomCode;
@@ -66,16 +67,16 @@ export default function Game() {
   const isHost = gameState?.hostId === myPlayerId;
 
   useEffect(() => {
-    socket.on("connect", () => {
+    function onConnect() {
       setConnected(true);
       socket.emit("join_room", { roomCode, playerId: myPlayerId });
-    });
-
-    socket.on("disconnect", () => setConnected(false));
-
-    socket.on("game_state", (state: GameState) => {
+    }
+    function onDisconnect() {
+      setConnected(false);
+    }
+    function onGameState(state: GameState) {
       setGameState(state);
-      if (state.awaitingAnswer && state.pendingDiceValue !== null) {
+      if (state.awaitingAnswer && state.pendingDiceValue !== null && !questionShownRef.current) {
         const currentP = state.players[state.currentPlayerIndex];
         if (currentP?.id === myPlayerId) {
           setDiceValue(state.pendingDiceValue);
@@ -84,31 +85,37 @@ export default function Game() {
             : getRandomText(state.level, usedTextIds.current);
           setCurrentText(text);
           setQuestionIdx(Math.floor(Math.random() * text.questions.length));
+          questionShownRef.current = true;
           setShowQuestion(true);
         }
       }
-    });
-
-    socket.on("game_started", (state: GameState) => {
+    }
+    function onGameStarted(state: GameState) {
       setGameState(state);
-    });
-
-    socket.on("dice_rolled", ({ game, playerId, diceValue: dv }: { game: GameState; playerId: string; diceValue: number }) => {
+    }
+    function onPlayerJoined({ game }: { game: GameState; playerId: string }) {
+      setGameState(game);
+    }
+    function onPlayerDisconnected({ game }: { game: GameState; playerId: string }) {
+      setGameState(game);
+    }
+    function onDiceRolled({ game, playerId, diceValue: dv }: { game: GameState; playerId: string; diceValue: number }) {
       setGameState(game);
       setDiceValue(dv);
       setRolling(false);
-      if (playerId === myPlayerId) {
+      if (playerId === myPlayerId && !questionShownRef.current) {
         const text = game.level === 3
           ? getRandomLevel3Text(usedTextIds.current)
           : getRandomText(game.level, usedTextIds.current);
         setCurrentText(text);
         setQuestionIdx(Math.floor(Math.random() * text.questions.length));
+        questionShownRef.current = true;
         setShowQuestion(true);
       }
-    });
-
-    socket.on("move_result", ({ game, playerId, moved, newPosition, event, reward }: any) => {
+    }
+    function onMoveResult({ game, playerId, moved, newPosition, reward }: any) {
       setGameState(game);
+      questionShownRef.current = false;
       setShowQuestion(false);
 
       if (moved) {
@@ -128,11 +135,20 @@ export default function Game() {
           setAnimationPath([]);
         }, path.length * 200 + 500);
       }
-    });
-
-    socket.on("game_over", ({ game }: { game: GameState }) => {
+    }
+    function onGameOver({ game }: { game: GameState }) {
       setGameState(game);
-    });
+    }
+
+    socket.on("connect", onConnect);
+    socket.on("disconnect", onDisconnect);
+    socket.on("game_state", onGameState);
+    socket.on("game_started", onGameStarted);
+    socket.on("player_joined", onPlayerJoined);
+    socket.on("player_disconnected", onPlayerDisconnected);
+    socket.on("dice_rolled", onDiceRolled);
+    socket.on("move_result", onMoveResult);
+    socket.on("game_over", onGameOver);
 
     if (socket.connected) {
       setConnected(true);
@@ -142,13 +158,15 @@ export default function Game() {
     }
 
     return () => {
-      socket.off("connect");
-      socket.off("disconnect");
-      socket.off("game_state");
-      socket.off("game_started");
-      socket.off("dice_rolled");
-      socket.off("move_result");
-      socket.off("game_over");
+      socket.off("connect", onConnect);
+      socket.off("disconnect", onDisconnect);
+      socket.off("game_state", onGameState);
+      socket.off("game_started", onGameStarted);
+      socket.off("player_joined", onPlayerJoined);
+      socket.off("player_disconnected", onPlayerDisconnected);
+      socket.off("dice_rolled", onDiceRolled);
+      socket.off("move_result", onMoveResult);
+      socket.off("game_over", onGameOver);
     };
   }, [roomCode, myPlayerId]);
 

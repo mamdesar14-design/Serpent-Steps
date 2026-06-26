@@ -58,14 +58,7 @@ export default function Home() {
 
   function startSolo() {
     if (!playerName.trim()) { setError("Please enter your name"); return; }
-    const tempCode = "SOLO" + Math.random().toString(36).substring(2, 6).toUpperCase();
-    fetch("/api/games", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ hostName: playerName.trim(), level }),
-    }).then(r => r.json()).then(data => {
-      setLocation(`/game/${data.roomCode}?playerId=${data.players[0].id}&level=${level}&solo=1`);
-    });
+    setLocation(`/solo?name=${encodeURIComponent(playerName.trim())}&level=${level}`);
   }
 
   return (

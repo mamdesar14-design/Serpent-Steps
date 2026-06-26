@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Home from "@/pages/Home";
 import Game from "@/pages/Game";
+import SoloPractice from "@/pages/SoloPractice";
 
 const queryClient = new QueryClient();
 
@@ -11,6 +12,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/solo" component={SoloPractice} />
       <Route path="/game/:roomCode" component={Game} />
       <Route>
         <div className="min-h-screen flex items-center justify-center">
