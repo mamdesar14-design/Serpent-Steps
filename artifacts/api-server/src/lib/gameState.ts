@@ -76,6 +76,34 @@ export const SNAKES_LEVEL2: Record<number, number> = {
   82: 44,
 };
 
+export const SNAKES_LEVEL3: Record<number, number> = {
+  8: 1,
+  15: 3,
+  22: 5,
+  31: 9,
+  37: 14,
+  44: 18,
+  50: 21,
+  57: 28,
+  62: 34,
+  68: 42,
+  74: 33,
+  81: 47,
+  86: 52,
+  91: 58,
+  96: 67,
+  98: 62,
+  99: 41,
+};
+
+export const LADDERS_LEVEL3: Record<number, { to: number; reward: LadderReward }> = {
+  6: { to: 19, reward: { type: "points", value: 5, description: "+5 points — a small mercy!" } },
+  26: { to: 38, reward: { type: "snake", value: -5, description: "Trap ladder! Fall back 5!" } },
+  53: { to: 65, reward: { type: "bonus_roll", value: 1, description: "1 bonus roll earned!" } },
+  72: { to: 85, reward: { type: "snake", value: -8, description: "Trapdoor! Drop 8 squares!" } },
+  83: { to: 97, reward: { type: "points", value: 15, description: "+15 points! Almost there!" } },
+};
+
 export const LADDERS_LEVEL2: Record<number, { to: number; reward: LadderReward }> = {
   4: { to: 14, reward: { type: "points", value: 10, description: "+10 bonus points!" } },
   9: { to: 31, reward: { type: "bonus_roll", value: 1, description: "Bonus roll!" } },
@@ -216,7 +244,7 @@ export function movePlayer(
       newPos = LADDERS_LEVEL1[newPos];
       event = `🪜 Ladder! ${player.name} climbed from ${from} to ${newPos}!`;
     }
-  } else {
+  } else if (game.level === 2) {
     if (SNAKES_LEVEL2[newPos]) {
       const from = newPos;
       newPos = SNAKES_LEVEL2[newPos];
@@ -235,6 +263,28 @@ export function movePlayer(
       } else if (reward.type === "snake") {
         newPos = Math.max(1, newPos + reward.value);
         event = `🎭 Surprise! ${ladder.reward.description}`;
+      }
+    }
+  } else {
+    // Level 3
+    if (SNAKES_LEVEL3[newPos]) {
+      const from = newPos;
+      newPos = SNAKES_LEVEL3[newPos];
+      event = `☠️ Deadly Snake! ${player.name} crashed from ${from} to ${newPos}!`;
+    } else if (LADDERS_LEVEL3[newPos]) {
+      const ladder = LADDERS_LEVEL3[newPos];
+      const from = newPos;
+      newPos = ladder.to;
+      reward = ladder.reward;
+      event = `🪜 Ladder! ${player.name} climbed from ${from} to ${newPos}! ${reward.description}`;
+
+      if (reward.type === "points") {
+        player.score += reward.value;
+      } else if (reward.type === "bonus_roll") {
+        player.bonusRolls += reward.value;
+      } else if (reward.type === "snake") {
+        newPos = Math.max(1, newPos + reward.value);
+        event = `💀 Trapdoor! ${ladder.reward.description}`;
       }
     }
   }

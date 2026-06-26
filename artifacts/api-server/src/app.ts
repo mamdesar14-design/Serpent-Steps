@@ -118,6 +118,17 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("leave_room", ({ roomCode: rc, playerId: pid }: { roomCode: string; playerId: string }) => {
+    disconnectPlayer(rc, pid);
+    socket.leave(rc);
+    const game = getGame(rc);
+    if (game) {
+      io.to(rc).emit("player_disconnected", { playerId: pid, game });
+      io.to(rc).emit("game_state", game);
+    }
+    logger.info({ socketId: socket.id, roomCode: rc }, "Player left room voluntarily");
+  });
+
   socket.on("disconnect", () => {
     const { roomCode, playerId } = socket.data;
     if (roomCode && playerId) {

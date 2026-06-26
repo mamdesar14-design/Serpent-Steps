@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
-import { Snake, Dice1, Users, LogIn, Plus, Gamepad2, Info } from "lucide-react";
+import { Dice1, Users, LogIn, Plus, Gamepad2, Info } from "lucide-react";
 
 export default function Home() {
   const [, setLocation] = useLocation();
@@ -208,25 +208,31 @@ export default function Home() {
                   <label className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1.5 block">
                     Difficulty Level
                   </label>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-3 gap-2">
                     {[
-                      { val: 1, label: "Level 1", desc: "Beginner questions, 45s timer" },
-                      { val: 2, label: "Level 2", desc: "Hard questions, 30s timer, more snakes!" },
+                      { val: 1, label: "Level 1", desc: "MCQ • 45s timer • 10 snakes", emoji: "🟢" },
+                      { val: 2, label: "Level 2", desc: "Hard MCQ • 30s • 14 snakes", emoji: "🟡" },
+                      { val: 3, label: "Level 3", desc: "Matching • 90s • 17 snakes! ☠️", emoji: "🔴" },
                     ].map((l) => (
                       <button
                         key={l.val}
                         onClick={() => setLevel(l.val)}
-                        className={`p-3 rounded-xl border text-left transition-all text-xs ${
+                        className={`p-2.5 rounded-xl border text-left transition-all text-xs ${
                           level === l.val
-                            ? "border-primary bg-primary/15 text-foreground"
+                            ? l.val === 3
+                              ? "border-purple-500 bg-purple-500/15 text-foreground"
+                              : "border-primary bg-primary/15 text-foreground"
                             : "border-border/40 text-muted-foreground hover:border-border"
                         }`}
                       >
-                        <div className="font-bold mb-0.5">{l.label}</div>
-                        <div className="opacity-80">{l.desc}</div>
+                        <div className="font-bold mb-0.5">{l.emoji} {l.label}</div>
+                        <div className="opacity-80 leading-tight">{l.desc}</div>
                       </button>
                     ))}
                   </div>
+                  {level === 3 && (
+                    <p className="text-xs text-purple-400 mt-2 font-medium">⚠️ Level 3: matching questions require you to pair concepts — extremely challenging!</p>
+                  )}
                 </div>
 
                 {error && (
@@ -339,22 +345,25 @@ export default function Home() {
                   <label className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1.5 block">
                     Difficulty Level
                   </label>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-3 gap-2">
                     {[
-                      { val: 1, label: "Level 1", desc: "Easier questions" },
-                      { val: 2, label: "Level 2", desc: "Harder questions" },
+                      { val: 1, label: "Level 1", desc: "MCQ • 45s", emoji: "🟢" },
+                      { val: 2, label: "Level 2", desc: "Hard MCQ • 30s", emoji: "🟡" },
+                      { val: 3, label: "Level 3", desc: "Matching ☠️ • 90s", emoji: "🔴" },
                     ].map((l) => (
                       <button
                         key={l.val}
                         onClick={() => setLevel(l.val)}
-                        className={`p-3 rounded-xl border text-left transition-all text-xs ${
+                        className={`p-2.5 rounded-xl border text-left transition-all text-xs ${
                           level === l.val
-                            ? "border-primary bg-primary/15 text-foreground"
+                            ? l.val === 3
+                              ? "border-purple-500 bg-purple-500/15 text-foreground"
+                              : "border-primary bg-primary/15 text-foreground"
                             : "border-border/40 text-muted-foreground hover:border-border"
                         }`}
                       >
-                        <div className="font-bold mb-0.5">{l.label}</div>
-                        <div className="opacity-80">{l.desc}</div>
+                        <div className="font-bold mb-0.5">{l.emoji} {l.label}</div>
+                        <div className="opacity-80 leading-tight">{l.desc}</div>
                       </button>
                     ))}
                   </div>

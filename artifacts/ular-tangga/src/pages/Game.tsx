@@ -2,12 +2,14 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useLocation, useSearch } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { getSocket } from "@/lib/socket";
-import { EXPLANATION_TEXTS, getRandomText, ExplanationText } from "@/lib/gameData";
+import { getRandomText, getRandomLevel3Text, ExplanationText, Level3ExplanationText } from "@/lib/gameData";
 import Board from "@/components/Board";
 import Dice from "@/components/Dice";
 import QuestionModal from "@/components/QuestionModal";
 import PlayerPanel from "@/components/PlayerPanel";
-import { Copy, Play, Home as HomeIcon, Trophy, ArrowLeft, Share2 } from "lucide-react";
+import { Copy, Play, Trophy, ArrowLeft, LogOut, Home as HomeIcon } from "lucide-react";
+
+type AnyText = ExplanationText | Level3ExplanationText;
 
 type Player = {
   id: string;
@@ -45,7 +47,7 @@ export default function Game() {
   const [diceValue, setDiceValue] = useState<number | null>(null);
   const [rolling, setRolling] = useState(false);
   const [showQuestion, setShowQuestion] = useState(false);
-  const [currentText, setCurrentText] = useState<ExplanationText | null>(null);
+  const [currentText, setCurrentText] = useState<AnyText | null>(null);
   const [questionIdx, setQuestionIdx] = useState(0);
   const [animatingPlayerId, setAnimatingPlayerId] = useState<string | null>(null);
   const [animationPath, setAnimationPath] = useState<number[]>([]);
@@ -77,7 +79,9 @@ export default function Game() {
         const currentP = state.players[state.currentPlayerIndex];
         if (currentP?.id === myPlayerId) {
           setDiceValue(state.pendingDiceValue);
-          const text = getRandomText(state.level, usedTextIds.current);
+          const text = state.level === 3
+            ? getRandomLevel3Text(usedTextIds.current)
+            : getRandomText(state.level, usedTextIds.current);
           setCurrentText(text);
           setQuestionIdx(Math.floor(Math.random() * text.questions.length));
           setShowQuestion(true);
@@ -94,7 +98,9 @@ export default function Game() {
       setDiceValue(dv);
       setRolling(false);
       if (playerId === myPlayerId) {
-        const text = getRandomText(game.level, usedTextIds.current);
+        const text = game.level === 3
+          ? getRandomLevel3Text(usedTextIds.current)
+          : getRandomText(game.level, usedTextIds.current);
         setCurrentText(text);
         setQuestionIdx(Math.floor(Math.random() * text.questions.length));
         setShowQuestion(true);
@@ -275,6 +281,16 @@ export default function Game() {
                   Waiting for host to start...
                 </p>
               )}
+              <button
+                onClick={() => {
+                  socket.emit("leave_room", { roomCode, playerId: myPlayerId });
+                  setLocation("/");
+                }}
+                className="w-full mt-2 py-2.5 rounded-xl border border-red-500/30 text-sm text-red-400 hover:bg-red-500/10 hover:border-red-500/50 flex items-center justify-center gap-2 transition-all"
+              >
+                <LogOut className="w-4 h-4" />
+                Leave Room
+              </button>
             </motion.div>
           )}
 

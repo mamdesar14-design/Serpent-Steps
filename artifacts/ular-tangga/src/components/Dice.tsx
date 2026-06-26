@@ -49,6 +49,7 @@ export default function Dice({ value, rolling, onRoll, disabled, canRoll }: Dice
     } else {
       setIsAnimating(false);
       if (value !== null) setDisplayValue(value);
+      return undefined;
     }
   }, [rolling, value]);
 

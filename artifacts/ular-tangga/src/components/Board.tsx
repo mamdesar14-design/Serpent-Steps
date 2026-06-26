@@ -1,6 +1,6 @@
 import { useMemo, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { SNAKES_LEVEL1, LADDERS_LEVEL1, SNAKES_LEVEL2, LADDERS_LEVEL2 } from "@/lib/gameData";
+import { SNAKES_LEVEL1, LADDERS_LEVEL1, SNAKES_LEVEL2, LADDERS_LEVEL2, SNAKES_LEVEL3, LADDERS_LEVEL3 } from "@/lib/gameData";
 
 type Player = {
   id: string;
@@ -31,15 +31,29 @@ function getCellCoords(pos: number, cellSize: number): { x: number; y: number } 
   };
 }
 
-function CellContent({ pos, level }: { pos: number; level: number }) {
-  const snakes = level === 1 ? SNAKES_LEVEL1 : SNAKES_LEVEL2;
-  const ladders = level === 1 ? LADDERS_LEVEL1 : LADDERS_LEVEL2;
+type LadderRecord = Record<number, { to: number; reward: { type: string } }>;
 
-  if (snakes[pos]) return <span className="text-base select-none">🐍</span>;
+function getSnakes(level: number): Record<number, number> {
+  if (level === 3) return SNAKES_LEVEL3;
+  if (level === 2) return SNAKES_LEVEL2;
+  return SNAKES_LEVEL1;
+}
+
+function getLadders(level: number): Record<number, number> | LadderRecord {
+  if (level === 3) return LADDERS_LEVEL3 as LadderRecord;
+  if (level === 2) return LADDERS_LEVEL2 as LadderRecord;
+  return LADDERS_LEVEL1;
+}
+
+function CellContent({ pos, level }: { pos: number; level: number }) {
+  const snakes = getSnakes(level);
+  const ladders = getLadders(level);
+
+  if (snakes[pos]) return <span className="text-base select-none">{level === 3 ? "☠️" : "🐍"}</span>;
   if (level === 1 && (ladders as Record<number, number>)[pos]) return <span className="text-base select-none">🪜</span>;
-  if (level === 2 && (ladders as Record<number, { to: number; reward: { type: string } }>)[pos]) {
-    const ladder = (ladders as Record<number, { to: number; reward: { type: string } }>)[pos];
-    if (ladder.reward.type === "snake") return <span className="text-base select-none">🎭</span>;
+  if ((level === 2 || level === 3) && (ladders as LadderRecord)[pos]) {
+    const ladder = (ladders as LadderRecord)[pos];
+    if (ladder.reward.type === "snake") return <span className="text-base select-none">{level === 3 ? "💀" : "🎭"}</span>;
     if (ladder.reward.type === "bonus_roll") return <span className="text-base select-none">🎲</span>;
     return <span className="text-base select-none">🪜</span>;
   }
@@ -48,15 +62,15 @@ function CellContent({ pos, level }: { pos: number; level: number }) {
 }
 
 function getCellColor(pos: number, level: number): string {
-  const snakes = level === 1 ? SNAKES_LEVEL1 : SNAKES_LEVEL2;
-  const ladders = level === 1 ? LADDERS_LEVEL1 : LADDERS_LEVEL2;
+  const snakes = getSnakes(level);
+  const ladders = getLadders(level);
 
   if (pos === 100) return "bg-yellow-500/30 border-yellow-400/60";
-  if (snakes[pos]) return "bg-red-900/40 border-red-500/40";
+  if (snakes[pos]) return level === 3 ? "bg-purple-950/60 border-purple-500/50" : "bg-red-900/40 border-red-500/40";
   if (level === 1 && (ladders as Record<number, number>)[pos]) return "bg-green-900/40 border-green-500/40";
-  if (level === 2 && (ladders as Record<number, { to: number }>)[pos]) {
-    const ladder = (ladders as Record<number, { to: number; reward: { type: string } }>)[pos];
-    if (ladder.reward.type === "snake") return "bg-orange-900/40 border-orange-500/40";
+  if ((level === 2 || level === 3) && (ladders as LadderRecord)[pos]) {
+    const ladder = (ladders as LadderRecord)[pos];
+    if (ladder.reward.type === "snake") return level === 3 ? "bg-fuchsia-950/60 border-fuchsia-500/50" : "bg-orange-900/40 border-orange-500/40";
     if (ladder.reward.type === "bonus_roll") return "bg-blue-900/40 border-blue-500/40";
     return "bg-green-900/40 border-green-500/40";
   }
@@ -65,6 +79,7 @@ function getCellColor(pos: number, level: number): string {
   const row = Math.floor(idx / 10);
   const col = idx % 10;
   const isEven = (row + col) % 2 === 0;
+  if (level === 3) return isEven ? "bg-purple-950/30 border-purple-800/30" : "bg-slate-800/60 border-slate-700/40";
   return isEven ? "bg-slate-700/60 border-slate-600/40" : "bg-slate-800/60 border-slate-700/40";
 }
 
@@ -85,8 +100,8 @@ export default function Board({ players, level, animatingPlayerId, animationPath
     return result;
   }, []);
 
-  const snakes = level === 1 ? SNAKES_LEVEL1 : SNAKES_LEVEL2;
-  const ladders = level === 1 ? LADDERS_LEVEL1 : LADDERS_LEVEL2;
+  const snakes = getSnakes(level);
+  const ladders = getLadders(level);
 
   return (
     <div className="relative select-none" style={{ width: BOARD_SIZE, height: BOARD_SIZE }}>
@@ -160,7 +175,7 @@ export default function Board({ players, level, animatingPlayerId, animationPath
             );
           })}
 
-        {level === 2 &&
+        {(level === 2 || level === 3) &&
           Object.entries(ladders as Record<number, { to: number; reward: { type: string } }>).map(([from, ladder]) => {
             const fromPos = parseInt(from);
             const start = getCellCoords(fromPos, CELL_SIZE);
