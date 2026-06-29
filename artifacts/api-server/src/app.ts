@@ -13,6 +13,7 @@ import {
   disconnectPlayer,
   reconnectPlayer,
   joinGame,
+  rematchGame,
 } from "./lib/gameState.js";
 
 const app: Express = express();
@@ -115,6 +116,14 @@ io.on("connection", (socket) => {
       if (result.game.status === "finished") {
         io.to(roomCode).emit("game_over", { winnerId: result.game.winnerId, game: result.game });
       }
+    }
+  });
+
+  socket.on("rematch", ({ roomCode: rc }: { roomCode: string }) => {
+    const game = rematchGame(rc);
+    if (game) {
+      io.to(rc).emit("game_state", game);
+      logger.info({ roomCode: rc }, "Rematch started");
     }
   });
 

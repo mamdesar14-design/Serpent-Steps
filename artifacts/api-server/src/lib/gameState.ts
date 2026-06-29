@@ -190,6 +190,24 @@ export function getGame(roomCode: string): GameState | undefined {
   return games.get(roomCode);
 }
 
+export function rematchGame(roomCode: string): GameState | null {
+  const game = games.get(roomCode);
+  if (!game) return null;
+  game.status = "waiting";
+  game.winnerId = null;
+  game.currentPlayerIndex = 0;
+  game.awaitingAnswer = false;
+  game.pendingDiceValue = null;
+  game.lastEvent = null;
+  game.questionIndex = 0;
+  for (const player of game.players) {
+    player.position = 0;
+    player.score = 0;
+    player.bonusRolls = 0;
+  }
+  return game;
+}
+
 export function startGame(roomCode: string): GameState | null {
   const game = games.get(roomCode);
   if (!game) return null;

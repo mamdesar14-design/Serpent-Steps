@@ -7,7 +7,7 @@ import Board from "@/components/Board";
 import Dice from "@/components/Dice";
 import QuestionModal from "@/components/QuestionModal";
 import PlayerPanel from "@/components/PlayerPanel";
-import { Copy, Play, Trophy, ArrowLeft, LogOut, Home as HomeIcon } from "lucide-react";
+import { Copy, Play, Trophy, ArrowLeft, LogOut, Home as HomeIcon, RotateCcw } from "lucide-react";
 
 type AnyText = ExplanationText | Level3ExplanationText;
 
@@ -457,14 +457,32 @@ export default function Game() {
                     ))}
                 </div>
 
-                <button
-                  onClick={() => setLocation("/")}
-                  className="w-full py-3 rounded-xl font-bold text-white flex items-center justify-center gap-2"
-                  style={{ background: "linear-gradient(135deg, hsl(258 90% 55%), hsl(258 90% 45%))" }}
-                >
-                  <HomeIcon className="w-4 h-4" />
-                  Back to Home
-                </button>
+                <div className="flex gap-2">
+                  {isHost && (
+                    <button
+                      onClick={() => socket.emit("rematch", { roomCode })}
+                      className="flex-1 py-3 rounded-xl font-bold text-white flex items-center justify-center gap-2 hover:scale-[1.02] transition-all"
+                      style={{ background: "linear-gradient(135deg, hsl(142 70% 40%), hsl(142 70% 30%))" }}
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                      Rematch
+                    </button>
+                  )}
+                  {!isHost && (
+                    <div className="flex-1 py-3 rounded-xl border border-border/40 text-sm text-muted-foreground flex items-center justify-center gap-2">
+                      <RotateCcw className="w-4 h-4 animate-spin" style={{ animationDuration: "2s" }} />
+                      Waiting for host...
+                    </div>
+                  )}
+                  <button
+                    onClick={() => setLocation("/")}
+                    className="flex-1 py-3 rounded-xl font-bold text-white flex items-center justify-center gap-2"
+                    style={{ background: "linear-gradient(135deg, hsl(258 90% 55%), hsl(258 90% 45%))" }}
+                  >
+                    <HomeIcon className="w-4 h-4" />
+                    Home
+                  </button>
+                </div>
               </div>
             </motion.div>
           </motion.div>
