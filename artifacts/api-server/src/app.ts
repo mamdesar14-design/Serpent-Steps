@@ -42,6 +42,8 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use("/api", router);
 
+const pendingAnswerTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
 io.on("connection", (socket) => {
   logger.info({ socketId: socket.id }, "Socket connected");
 
@@ -87,6 +89,18 @@ io.on("connection", (socket) => {
     const updatedGame = setAwaitingAnswer(roomCode, diceValue);
     if (updatedGame) {
       io.to(roomCode).emit("dice_rolled", { game: updatedGame, playerId, diceValue });
+
+      // Auto-skip if player doesn't answer in time (5s buffer beyond client timer)
+      const timeLimit = updatedGame.level === 3 ? 97000 : 52000;
+      const timer = setTimeout(() => {
+        pendingAnswerTimers.delete(roomCode);
+        const r = movePlayer(roomCode, playerId, diceValue, false);
+        if (r) {
+          io.to(roomCode).emit("move_result", { game: r.game, playerId, moved: false, newPosition: r.newPosition, event: r.event, reward: null, streakBonus: 0, correct: false, autoSkipped: true });
+          io.to(roomCode).emit("game_state", r.game);
+        }
+      }, timeLimit);
+      pendingAnswerTimers.set(roomCode, timer);
     }
   });
 
@@ -101,6 +115,10 @@ io.on("connection", (socket) => {
     correct: boolean;
     diceValue: number;
   }) => {
+    // Clear auto-skip timer
+    const timer = pendingAnswerTimers.get(roomCode);
+    if (timer) { clearTimeout(timer); pendingAnswerTimers.delete(roomCode); }
+
     const result = movePlayer(roomCode, playerId, diceValue, correct);
     if (result) {
       io.to(roomCode).emit("move_result", {
@@ -110,6 +128,7 @@ io.on("connection", (socket) => {
         newPosition: result.newPosition,
         event: result.event,
         reward: result.reward,
+        streakBonus: result.streakBonus,
         correct,
       });
       io.to(roomCode).emit("game_state", result.game);
@@ -117,6 +136,10 @@ io.on("connection", (socket) => {
         io.to(roomCode).emit("game_over", { winnerId: result.game.winnerId, game: result.game });
       }
     }
+  });
+
+  socket.on("emoji_react", ({ roomCode: rc, playerId, emoji }: { roomCode: string; playerId: string; emoji: string }) => {
+    io.to(rc).emit("emoji_react", { playerId, emoji });
   });
 
   socket.on("rematch", ({ roomCode: rc }: { roomCode: string }) => {

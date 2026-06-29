@@ -7,7 +7,9 @@ import Board from "@/components/Board";
 import Dice from "@/components/Dice";
 import QuestionModal from "@/components/QuestionModal";
 import PlayerPanel from "@/components/PlayerPanel";
-import { Copy, Play, Trophy, ArrowLeft, LogOut, Home as HomeIcon, RotateCcw } from "lucide-react";
+import Confetti from "@/components/Confetti";
+import { sounds } from "@/lib/sounds";
+import { Copy, Play, Trophy, ArrowLeft, LogOut, Home as HomeIcon, RotateCcw, Volume2, VolumeX } from "lucide-react";
 
 type AnyText = ExplanationText | Level3ExplanationText;
 
@@ -54,8 +56,13 @@ export default function Game() {
   const [rewardMsg, setRewardMsg] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [connected, setConnected] = useState(false);
+  const [muted, setMuted] = useState(false);
+  const [emojiReactions, setEmojiReactions] = useState<Array<{ id: number; playerId: string; name: string; emoji: string }>>([]);
+  const [streakMsg, setStreakMsg] = useState<string | null>(null);
+  const [showConfetti, setShowConfetti] = useState(false);
   const usedTextIds = useRef<string[]>([]);
   const questionShownRef = useRef(false);
+  const emojiIdRef = useRef(0);
   const socketRef = useRef(getSocket());
 
   const roomCode = params.roomCode;
@@ -113,10 +120,26 @@ export default function Game() {
         setShowQuestion(true);
       }
     }
-    function onMoveResult({ game, playerId, moved, newPosition, reward }: any) {
+    function onMoveResult({ game, playerId, moved, newPosition, reward, streakBonus, correct }: any) {
       setGameState(game);
       questionShownRef.current = false;
       setShowQuestion(false);
+
+      if (correct === false) sounds.wrong();
+      else if (moved) {
+        if (reward?.type === "snake" || game.lastEvent?.includes("Snake") || game.lastEvent?.includes("slid")) sounds.snake();
+        else if (game.lastEvent?.includes("Ladder") || game.lastEvent?.includes("climbed")) sounds.ladder();
+        else sounds.correct();
+      } else {
+        sounds.correct();
+      }
+
+      if (streakBonus > 0 && playerId === myPlayerId) {
+        const streakNum = game.players.find((p: any) => p.id === playerId)?.streak ?? 0;
+        setStreakMsg(`🔥 ${streakNum} streak! +${streakBonus} bonus pts`);
+        sounds.streak();
+        setTimeout(() => setStreakMsg(null), 3000);
+      }
 
       if (moved) {
         setAnimatingPlayerId(playerId);
@@ -138,6 +161,17 @@ export default function Game() {
     }
     function onGameOver({ game }: { game: GameState }) {
       setGameState(game);
+      sounds.win();
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 5000);
+    }
+    function onEmojiReact({ playerId, emoji }: { playerId: string; emoji: string }) {
+      const player = gameState?.players.find(p => p.id === playerId);
+      const name = player?.name ?? "Player";
+      sounds.emoji();
+      const id = ++emojiIdRef.current;
+      setEmojiReactions(prev => [...prev, { id, playerId, name, emoji }]);
+      setTimeout(() => setEmojiReactions(prev => prev.filter(r => r.id !== id)), 3000);
     }
 
     socket.on("connect", onConnect);
@@ -149,6 +183,7 @@ export default function Game() {
     socket.on("dice_rolled", onDiceRolled);
     socket.on("move_result", onMoveResult);
     socket.on("game_over", onGameOver);
+    socket.on("emoji_react", onEmojiReact);
 
     if (socket.connected) {
       setConnected(true);
@@ -167,6 +202,7 @@ export default function Game() {
       socket.off("dice_rolled", onDiceRolled);
       socket.off("move_result", onMoveResult);
       socket.off("game_over", onGameOver);
+      socket.off("emoji_react", onEmojiReact);
     };
   }, [roomCode, myPlayerId]);
 
@@ -175,6 +211,7 @@ export default function Game() {
     const val = Math.floor(Math.random() * 6) + 1;
     setRolling(true);
     setDiceValue(null);
+    sounds.dice();
     setTimeout(() => {
       setRolling(false);
       setDiceValue(val);
@@ -254,6 +291,13 @@ export default function Game() {
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => { const m = !muted; setMuted(m); sounds.setMuted(m); }}
+            className="p-1.5 rounded-lg hover:bg-muted/40 transition-colors text-muted-foreground hover:text-foreground"
+            title={muted ? "Unmute" : "Mute"}
+          >
+            {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+          </button>
           <div
             className={`w-2 h-2 rounded-full ${connected ? "bg-green-400" : "bg-red-400"}`}
           />
@@ -365,6 +409,26 @@ export default function Game() {
             lastEvent={gameState.lastEvent}
           />
 
+          {gameState.status === "playing" && gameState.players.length > 1 && (
+            <div className="bg-card/40 border border-border/30 rounded-xl p-3">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">React</p>
+              <div className="flex gap-1.5 flex-wrap">
+                {["🔥", "👏", "😂", "😱", "💪"].map(emoji => (
+                  <button
+                    key={emoji}
+                    onClick={() => {
+                      socket.emit("emoji_react", { roomCode, playerId: myPlayerId, emoji });
+                      sounds.emoji();
+                    }}
+                    className="text-xl hover:scale-125 transition-transform active:scale-95 p-1 rounded-lg hover:bg-muted/40"
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="bg-card/40 border border-border/30 rounded-xl p-3 text-xs text-muted-foreground space-y-1.5">
             <p className="font-semibold text-foreground text-xs uppercase tracking-wider mb-2">Legend</p>
             <div className="flex items-center gap-2"><span>🐍</span><span>Snake — slide down</span></div>
@@ -403,6 +467,40 @@ export default function Game() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <AnimatePresence>
+        {streakMsg && (
+          <motion.div
+            className="fixed top-32 left-1/2 -translate-x-1/2 z-40 bg-orange-500/90 text-white font-bold px-6 py-3 rounded-full shadow-xl text-sm"
+            initial={{ opacity: 0, y: -20, scale: 0.8 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.8 }}
+          >
+            {streakMsg}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {emojiReactions.map(r => (
+          <motion.div
+            key={r.id}
+            className="fixed bottom-24 left-1/2 z-40 pointer-events-none"
+            style={{ x: "-50%" }}
+            initial={{ opacity: 0, y: 0, scale: 0.5 }}
+            animate={{ opacity: 1, y: -60, scale: 1.4 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            transition={{ duration: 0.5 }}
+          >
+            <div className="flex flex-col items-center">
+              <span className="text-3xl">{r.emoji}</span>
+              <span className="text-xs text-white/80 font-bold bg-black/50 rounded px-1">{r.name}</span>
+            </div>
+          </motion.div>
+        ))}
+      </AnimatePresence>
+
+      <Confetti active={showConfetti} />
 
       <AnimatePresence>
         {gameState.status === "finished" && winner && (

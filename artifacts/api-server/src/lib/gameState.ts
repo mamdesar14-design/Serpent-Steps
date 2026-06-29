@@ -16,6 +16,7 @@ export type Player = {
   color: string;
   bonusRolls: number;
   isConnected: boolean;
+  streak: number;
 };
 
 export type GameState = {
@@ -135,6 +136,7 @@ export function createGame(hostName: string, level: number): GameState {
     color: PLAYER_COLORS[0],
     bonusRolls: 0,
     isConnected: true,
+    streak: 0,
   };
 
   const game: GameState = {
@@ -180,6 +182,7 @@ export function joinGame(
     color: PLAYER_COLORS[game.players.length],
     bonusRolls: 0,
     isConnected: true,
+    streak: 0,
   };
 
   game.players.push(player);
@@ -204,6 +207,7 @@ export function rematchGame(roomCode: string): GameState | null {
     player.position = 0;
     player.score = 0;
     player.bonusRolls = 0;
+    player.streak = 0;
   }
   return game;
 }
@@ -227,6 +231,7 @@ export function movePlayer(
   newPosition: number;
   event: string | null;
   reward: LadderReward | null;
+  streakBonus: number;
 } | null {
   const game = games.get(roomCode);
   if (!game || game.status !== "playing") return null;
@@ -237,14 +242,22 @@ export function movePlayer(
   const player = game.players[playerIdx];
 
   if (!answeredCorrectly) {
+    player.streak = 0;
     game.awaitingAnswer = false;
     game.pendingDiceValue = null;
     game.lastEvent = `${player.name} answered incorrectly. Stay in place!`;
     game.currentPlayerIndex = (game.currentPlayerIndex + 1) % game.players.length;
-    return { game, moved: false, newPosition: player.position, event: game.lastEvent, reward: null };
+    return { game, moved: false, newPosition: player.position, event: game.lastEvent, reward: null, streakBonus: 0 };
   }
 
+  player.streak += 1;
   player.score += diceValue * 10;
+
+  // Streak bonus points
+  let streakBonus = 0;
+  if (player.streak === 3) { streakBonus = 30; player.score += streakBonus; }
+  else if (player.streak === 5) { streakBonus = 50; player.score += streakBonus; }
+  else if (player.streak >= 7 && player.streak % 2 === 1) { streakBonus = 100; player.score += streakBonus; }
 
   let newPos = player.position + diceValue;
   if (newPos > 100) newPos = 100;
@@ -326,7 +339,7 @@ export function movePlayer(
     game.currentPlayerIndex = nextIdx;
   }
 
-  return { game, moved: true, newPosition: newPos, event, reward };
+  return { game, moved: true, newPosition: newPos, event, reward, streakBonus };
 }
 
 export function setAwaitingAnswer(roomCode: string, diceValue: number): GameState | null {

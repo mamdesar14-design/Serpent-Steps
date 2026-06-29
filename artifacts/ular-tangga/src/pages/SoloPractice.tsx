@@ -13,7 +13,9 @@ import {
 import Board from "@/components/Board";
 import Dice from "@/components/Dice";
 import QuestionModal from "@/components/QuestionModal";
-import { ArrowLeft, Home as HomeIcon, RotateCcw } from "lucide-react";
+import Confetti from "@/components/Confetti";
+import { sounds } from "@/lib/sounds";
+import { ArrowLeft, Home as HomeIcon, RotateCcw, Volume2, VolumeX } from "lucide-react";
 
 type AnyText = ExplanationText | Level3ExplanationText;
 
@@ -36,6 +38,7 @@ function resolveLadder(val: number | { to: number; reward: RewardInfo }): { to: 
 }
 
 const PLAYER_COLOR = "#8B5CF6";
+const STREAK_BONUSES: Record<number, number> = { 3: 30, 5: 50, 7: 100 };
 
 export default function SoloPractice() {
   const searchStr = useSearch();
@@ -46,6 +49,7 @@ export default function SoloPractice() {
 
   const [position, setPosition] = useState(0);
   const [score, setScore] = useState(0);
+  const [streak, setStreak] = useState(0);
   const [diceValue, setDiceValue] = useState<number | null>(null);
   const [rolling, setRolling] = useState(false);
   const [showQuestion, setShowQuestion] = useState(false);
@@ -56,7 +60,10 @@ export default function SoloPractice() {
   const [animationPath, setAnimationPath] = useState<number[]>([]);
   const [lastEvent, setLastEvent] = useState<string | null>(null);
   const [rewardMsg, setRewardMsg] = useState<string | null>(null);
+  const [streakMsg, setStreakMsg] = useState<string | null>(null);
   const [gameOver, setGameOver] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [muted, setMuted] = useState(false);
   const [stats, setStats] = useState({ correct: 0, wrong: 0, snakes: 0, ladders: 0 });
   const usedTextIds = useRef<string[]>([]);
 
@@ -68,6 +75,7 @@ export default function SoloPractice() {
     color: PLAYER_COLOR,
     bonusRolls: 0,
     isConnected: true,
+    streak,
   }];
 
   const rollDice = useCallback(() => {
@@ -75,6 +83,7 @@ export default function SoloPractice() {
     const val = Math.floor(Math.random() * 6) + 1;
     setRolling(true);
     setDiceValue(null);
+    sounds.dice();
     setTimeout(() => {
       setRolling(false);
       setDiceValue(val);
@@ -95,6 +104,8 @@ export default function SoloPractice() {
     }
 
     if (!correct) {
+      sounds.wrong();
+      setStreak(0);
       setLastEvent("Wrong answer — stay in place!");
       setStats(s => ({ ...s, wrong: s.wrong + 1 }));
       return;
@@ -109,11 +120,13 @@ export default function SoloPractice() {
     let bonusScore = 10;
 
     if (snakes[newPos] !== undefined) {
+      sounds.snake();
       event = { type: "snake", from: newPos, to: snakes[newPos] };
       newPos = snakes[newPos];
       setStats(s => ({ ...s, correct: s.correct + 1, snakes: s.snakes + 1 }));
       setLastEvent(`🐍 Snake! Slid down from ${event.from} → ${event.to}`);
     } else if (ladders[newPos] !== undefined) {
+      sounds.ladder();
       const resolved = resolveLadder(ladders[newPos] as any);
       event = { type: "ladder", from: newPos, to: resolved.to, reward: resolved.reward };
       newPos = resolved.to;
@@ -125,8 +138,19 @@ export default function SoloPractice() {
         setTimeout(() => setRewardMsg(null), 3000);
       }
     } else {
+      sounds.correct();
       setStats(s => ({ ...s, correct: s.correct + 1 }));
       setLastEvent(`Moved to square ${newPos} (+${bonusScore} pts)`);
+    }
+
+    const newStreak = streak + 1;
+    setStreak(newStreak);
+    const streakBonus = STREAK_BONUSES[newStreak] ?? (newStreak >= 7 ? STREAK_BONUSES[7] : 0);
+    if (streakBonus > 0) {
+      bonusScore += streakBonus;
+      sounds.streak();
+      setStreakMsg(`🔥 ${newStreak} streak! +${streakBonus} bonus pts`);
+      setTimeout(() => setStreakMsg(null), 3000);
     }
 
     const path: number[] = [];
@@ -143,13 +167,17 @@ export default function SoloPractice() {
     setPosition(newPos);
 
     if (newPos >= 100) {
+      sounds.win();
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 5000);
       setGameOver(true);
     }
-  }, [currentText, pendingDice, level, position]);
+  }, [currentText, pendingDice, level, position, streak]);
 
   const resetGame = () => {
     setPosition(0);
     setScore(0);
+    setStreak(0);
     setDiceValue(null);
     setRolling(false);
     setShowQuestion(false);
@@ -159,7 +187,9 @@ export default function SoloPractice() {
     setAnimationPath([]);
     setLastEvent(null);
     setRewardMsg(null);
+    setStreakMsg(null);
     setGameOver(false);
+    setShowConfetti(false);
     setStats({ correct: 0, wrong: 0, snakes: 0, ladders: 0 });
     usedTextIds.current = [];
   };
@@ -188,6 +218,13 @@ export default function SoloPractice() {
 
         <div className="flex items-center gap-2">
           <span className="text-xs font-bold text-primary">{playerName}</span>
+          <button
+            onClick={() => { const m = !muted; setMuted(m); sounds.setMuted(m); }}
+            className="p-1.5 rounded-lg hover:bg-card border border-transparent hover:border-border/40 text-muted-foreground hover:text-foreground transition-all"
+            title={muted ? "Unmute" : "Mute"}
+          >
+            {muted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+          </button>
           <button
             onClick={resetGame}
             className="p-1.5 rounded-lg hover:bg-card border border-transparent hover:border-border/40 text-muted-foreground hover:text-foreground transition-all"
@@ -244,11 +281,24 @@ export default function SoloPractice() {
         <div className="w-52 md:w-60 shrink-0 flex flex-col gap-3 overflow-y-auto">
           <div className="bg-card/60 border border-border/30 rounded-xl p-4 space-y-3">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-black text-white shrink-0" style={{ background: PLAYER_COLOR }}>
-                {playerName.slice(0, 2).toUpperCase()}
+              <div className="relative">
+                <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-black text-white shrink-0" style={{ background: PLAYER_COLOR }}>
+                  {playerName.slice(0, 2).toUpperCase()}
+                </div>
               </div>
-              <div>
-                <p className="font-bold text-sm text-foreground">{playerName}</p>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1">
+                  <p className="font-bold text-sm text-foreground truncate">{playerName}</p>
+                  {streak >= 2 && (
+                    <motion.span
+                      className="text-xs font-black"
+                      animate={{ scale: [1, 1.2, 1] }}
+                      transition={{ duration: 0.6, repeat: Infinity }}
+                    >
+                      {"🔥".repeat(Math.min(streak, 3))}
+                    </motion.span>
+                  )}
+                </div>
                 <p className="text-xs text-muted-foreground">Square {position}</p>
               </div>
             </div>
@@ -263,6 +313,12 @@ export default function SoloPractice() {
                 <p className="text-xs text-muted-foreground">Accuracy</p>
               </div>
             </div>
+
+            {streak >= 2 && (
+              <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg py-2 text-center">
+                <p className="text-xs font-bold text-orange-400">🔥 {streak} answer streak!</p>
+              </div>
+            )}
 
             <div className="text-xs space-y-1 pt-1 border-t border-border/30">
               <div className="flex justify-between text-muted-foreground">
@@ -323,6 +379,21 @@ export default function SoloPractice() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <AnimatePresence>
+        {streakMsg && (
+          <motion.div
+            className="fixed top-32 left-1/2 -translate-x-1/2 z-40 bg-orange-500/90 text-white font-bold px-6 py-3 rounded-full shadow-xl text-sm"
+            initial={{ opacity: 0, y: -20, scale: 0.8 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.8 }}
+          >
+            {streakMsg}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <Confetti active={showConfetti} />
 
       <AnimatePresence>
         {gameOver && (

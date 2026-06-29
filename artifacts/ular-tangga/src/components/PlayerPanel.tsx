@@ -9,6 +9,7 @@ type Player = {
   color: string;
   bonusRolls: number;
   isConnected?: boolean;
+  streak?: number;
 };
 
 type PlayerPanelProps = {
@@ -106,6 +107,15 @@ export default function PlayerPanel({
                       >
                         <Star className="w-3.5 h-3.5 text-primary shrink-0" />
                       </motion.div>
+                    )}
+                    {(player.streak ?? 0) >= 2 && (
+                      <motion.span
+                        className="text-xs font-black"
+                        animate={{ scale: [1, 1.2, 1] }}
+                        transition={{ duration: 0.6, repeat: Infinity }}
+                      >
+                        {"🔥".repeat(Math.min(player.streak ?? 0, 3))}
+                      </motion.span>
                     )}
                   </div>
                   <div className="flex items-center gap-2 mt-0.5">
