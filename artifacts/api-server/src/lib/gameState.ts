@@ -124,7 +124,7 @@ function generateRoomCode(): string {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
 }
 
-export function createGame(hostName: string, level: number): GameState {
+export function createGame(hostName: string, level: number, color?: string): GameState {
   const roomCode = generateRoomCode();
   const hostId = randomUUID();
 
@@ -133,7 +133,7 @@ export function createGame(hostName: string, level: number): GameState {
     name: hostName,
     position: 0,
     score: 0,
-    color: PLAYER_COLORS[0],
+    color: color || PLAYER_COLORS[0],
     bonusRolls: 0,
     isConnected: true,
     streak: 0,
@@ -168,6 +168,7 @@ export function createGame(hostName: string, level: number): GameState {
 export function joinGame(
   roomCode: string,
   playerName: string,
+  color?: string,
 ): { game: GameState; player: Player } | null {
   const game = games.get(roomCode);
   if (!game) return null;
@@ -179,7 +180,7 @@ export function joinGame(
     name: playerName,
     position: 0,
     score: 0,
-    color: PLAYER_COLORS[game.players.length],
+    color: color || PLAYER_COLORS[game.players.length],
     bonusRolls: 0,
     isConnected: true,
     streak: 0,

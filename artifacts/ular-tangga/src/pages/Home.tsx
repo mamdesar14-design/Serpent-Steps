@@ -1,7 +1,37 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
-import { Dice1, Users, LogIn, Plus, Gamepad2, Info } from "lucide-react";
+import { Users, LogIn, Plus, Gamepad2, Info } from "lucide-react";
+
+const COLOR_PALETTE = [
+  "#EF4444", "#F97316", "#F59E0B", "#10B981",
+  "#3B82F6", "#8B5CF6", "#EC4899", "#06B6D4",
+  "#84CC16", "#A78BFA",
+];
+
+function ColorPicker({ value, onChange }: { value: string; onChange: (c: string) => void }) {
+  return (
+    <div>
+      <label className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1.5 block">
+        Token Color
+      </label>
+      <div className="flex flex-wrap gap-2">
+        {COLOR_PALETTE.map(c => (
+          <button
+            key={c}
+            onClick={() => onChange(c)}
+            className="w-7 h-7 rounded-full border-2 transition-all hover:scale-110"
+            style={{
+              background: c,
+              borderColor: value === c ? "white" : "transparent",
+              boxShadow: value === c ? `0 0 0 3px ${c}60` : undefined,
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function Home() {
   const [, setLocation] = useLocation();
@@ -12,6 +42,17 @@ export default function Home() {
   const [level, setLevel] = useState(1);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [selectedColor, setSelectedColor] = useState(COLOR_PALETTE[0]);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("ular_tangga_color");
+    if (saved && COLOR_PALETTE.includes(saved)) setSelectedColor(saved);
+  }, []);
+
+  function saveColor(c: string) {
+    setSelectedColor(c);
+    localStorage.setItem("ular_tangga_color", c);
+  }
 
   async function createGame() {
     if (!hostName.trim()) { setError("Please enter your name"); return; }
@@ -21,7 +62,7 @@ export default function Home() {
       const res = await fetch("/api/games", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ hostName: hostName.trim(), level }),
+        body: JSON.stringify({ hostName: hostName.trim(), level, color: selectedColor }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -42,7 +83,7 @@ export default function Home() {
       const res = await fetch(`/api/games/${roomCode.trim().toUpperCase()}/join`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ playerName: playerName.trim() }),
+        body: JSON.stringify({ playerName: playerName.trim(), color: selectedColor }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -58,7 +99,7 @@ export default function Home() {
 
   function startSolo() {
     if (!playerName.trim()) { setError("Please enter your name"); return; }
-    setLocation(`/solo?name=${encodeURIComponent(playerName.trim())}&level=${level}`);
+    setLocation(`/solo?name=${encodeURIComponent(playerName.trim())}&level=${level}&color=${encodeURIComponent(selectedColor)}`);
   }
 
   return (

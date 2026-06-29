@@ -4,12 +4,12 @@ import { createGame, joinGame, getGame } from "../lib/gameState.js";
 const router = Router();
 
 router.post("/games", (req, res) => {
-  const { hostName, level } = req.body as { hostName: string; level: number };
+  const { hostName, level, color } = req.body as { hostName: string; level: number; color?: string };
   if (!hostName || !level) {
     res.status(400).json({ error: "hostName and level are required" });
     return;
   }
-  const game = createGame(hostName, level);
+  const game = createGame(hostName, level, color);
   res.status(201).json(game);
 });
 
@@ -23,12 +23,12 @@ router.get("/games/:roomCode", (req, res) => {
 });
 
 router.post("/games/:roomCode/join", (req, res) => {
-  const { playerName } = req.body as { playerName: string };
+  const { playerName, color } = req.body as { playerName: string; color?: string };
   if (!playerName) {
     res.status(400).json({ error: "playerName is required" });
     return;
   }
-  const result = joinGame(req.params.roomCode, playerName);
+  const result = joinGame(req.params.roomCode, playerName, color);
   if (!result) {
     res.status(400).json({ error: "Cannot join game (not found, full, or already started)" });
     return;

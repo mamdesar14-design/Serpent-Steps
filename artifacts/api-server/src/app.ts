@@ -142,6 +142,11 @@ io.on("connection", (socket) => {
     io.to(rc).emit("emoji_react", { playerId, emoji });
   });
 
+  socket.on("chat_message", ({ roomCode: rc, playerId, playerName, text, color }: { roomCode: string; playerId: string; playerName: string; text: string; color: string }) => {
+    if (!text?.trim() || text.length > 200) return;
+    io.to(rc).emit("chat_message", { playerId, playerName, text: text.trim(), color, ts: Date.now() });
+  });
+
   socket.on("rematch", ({ roomCode: rc }: { roomCode: string }) => {
     const game = rematchGame(rc);
     if (game) {
