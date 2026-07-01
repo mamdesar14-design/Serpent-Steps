@@ -269,6 +269,8 @@ export default function Home() {
                   )}
                 </div>
 
+                <ColorPicker value={selectedColor} onChange={saveColor} />
+
                 {error && (
                   <p className="text-sm text-destructive font-medium">{error}</p>
                 )}
@@ -284,7 +286,7 @@ export default function Home() {
                     onClick={createGame}
                     disabled={loading}
                     className="flex-2 flex-grow-[2] py-2.5 rounded-xl font-bold text-white text-sm transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
-                    style={{ background: "linear-gradient(135deg, hsl(258 90% 55%), hsl(258 90% 45%))" }}
+                    style={{ background: `linear-gradient(135deg, ${selectedColor}cc, ${selectedColor}99)` }}
                   >
                     {loading ? "Creating..." : "Create Room"}
                   </button>
@@ -329,6 +331,8 @@ export default function Home() {
                   />
                 </div>
 
+                <ColorPicker value={selectedColor} onChange={saveColor} />
+
                 {error && (
                   <p className="text-sm text-destructive font-medium">{error}</p>
                 )}
@@ -344,7 +348,7 @@ export default function Home() {
                     onClick={joinGame}
                     disabled={loading}
                     className="flex-2 flex-grow-[2] py-2.5 rounded-xl font-bold text-white text-sm transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
-                    style={{ background: "linear-gradient(135deg, hsl(196 80% 45%), hsl(196 80% 35%))" }}
+                    style={{ background: `linear-gradient(135deg, ${selectedColor}cc, ${selectedColor}99)` }}
                   >
                     {loading ? "Joining..." : "Join Room"}
                   </button>
@@ -402,6 +406,8 @@ export default function Home() {
                     ))}
                   </div>
                 </div>
+
+                <ColorPicker value={selectedColor} onChange={saveColor} />
 
                 {error && <p className="text-sm text-destructive font-medium">{error}</p>}
 

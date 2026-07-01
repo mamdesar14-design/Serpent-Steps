@@ -15,6 +15,7 @@ import Dice from "@/components/Dice";
 import QuestionModal from "@/components/QuestionModal";
 import Confetti from "@/components/Confetti";
 import { sounds } from "@/lib/sounds";
+import { checkAndUnlock, Badge } from "@/lib/achievements";
 import { ArrowLeft, Home as HomeIcon, RotateCcw, Volume2, VolumeX } from "lucide-react";
 
 type AnyText = ExplanationText | Level3ExplanationText;
@@ -37,7 +38,7 @@ function resolveLadder(val: number | { to: number; reward: RewardInfo }): { to: 
   return { to: val.to, reward: val.reward };
 }
 
-const PLAYER_COLOR = "#8B5CF6";
+const DEFAULT_COLOR = "#8B5CF6";
 const STREAK_BONUSES: Record<number, number> = { 3: 30, 5: 50, 7: 100 };
 
 export default function SoloPractice() {
@@ -46,6 +47,7 @@ export default function SoloPractice() {
   const searchParams = new URLSearchParams(searchStr);
   const playerName = searchParams.get("name") || "Player";
   const level = parseInt(searchParams.get("level") || "1");
+  const PLAYER_COLOR = searchParams.get("color") || DEFAULT_COLOR;
 
   const [position, setPosition] = useState(0);
   const [score, setScore] = useState(0);
@@ -64,6 +66,7 @@ export default function SoloPractice() {
   const [gameOver, setGameOver] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [muted, setMuted] = useState(false);
+  const [newBadges, setNewBadges] = useState<Badge[]>([]);
   const [stats, setStats] = useState({ correct: 0, wrong: 0, snakes: 0, ladders: 0 });
   const usedTextIds = useRef<string[]>([]);
 
@@ -171,6 +174,17 @@ export default function SoloPractice() {
       setShowConfetti(true);
       setTimeout(() => setShowConfetti(false), 5000);
       setGameOver(true);
+      // Check achievements
+      setStats(s => {
+        const total = s.correct + s.wrong + 1;
+        const acc = Math.round(((s.correct + 1) / total) * 100);
+        const earned = checkAndUnlock({ won: true, level, streak: newStreak, snakesHit: s.snakes, accuracy: acc });
+        if (earned.length > 0) {
+          setNewBadges(earned);
+          setTimeout(() => setNewBadges([]), 6000);
+        }
+        return s;
+      });
     }
   }, [currentText, pendingDice, level, position, streak]);
 
@@ -396,6 +410,34 @@ export default function SoloPractice() {
       <Confetti active={showConfetti} />
 
       <AnimatePresence>
+        {newBadges.length > 0 && (
+          <motion.div
+            className="fixed top-16 right-4 z-50 space-y-2"
+            initial={{ opacity: 0, x: 60 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 60 }}
+          >
+            {newBadges.map(b => (
+              <motion.div
+                key={b.id}
+                className="flex items-center gap-2 bg-card/95 border border-yellow-500/40 rounded-xl px-4 py-2.5 shadow-xl"
+                initial={{ scale: 0.8 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring" }}
+              >
+                <span className="text-2xl">{b.emoji}</span>
+                <div>
+                  <p className="text-xs font-black text-yellow-400">Badge Unlocked!</p>
+                  <p className="text-xs font-bold text-foreground">{b.name}</p>
+                  <p className="text-xs text-muted-foreground">{b.description}</p>
+                </div>
+              </motion.div>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
         {gameOver && (
           <motion.div
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -421,7 +463,22 @@ export default function SoloPractice() {
                   🏆
                 </motion.div>
                 <h2 className="text-2xl font-black text-foreground mb-1">You Won!</h2>
-                <p className="text-muted-foreground text-sm mb-5">Reached square 100!</p>
+                <p className="text-muted-foreground text-sm mb-4">Reached square 100!</p>
+
+                {newBadges.length > 0 && (
+                  <div className="mb-4 space-y-1.5">
+                    <p className="text-xs font-black text-yellow-400 uppercase tracking-wider">🏅 Badges Earned!</p>
+                    {newBadges.map(b => (
+                      <div key={b.id} className="flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/20 rounded-xl px-3 py-2">
+                        <span className="text-xl">{b.emoji}</span>
+                        <div className="text-left">
+                          <p className="text-xs font-bold text-foreground">{b.name}</p>
+                          <p className="text-xs text-muted-foreground">{b.description}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 <div className="bg-card/50 rounded-xl p-4 mb-6 text-sm space-y-2">
                   <div className="flex justify-between">

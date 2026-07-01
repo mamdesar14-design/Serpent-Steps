@@ -9,7 +9,8 @@ import QuestionModal from "@/components/QuestionModal";
 import PlayerPanel from "@/components/PlayerPanel";
 import Confetti from "@/components/Confetti";
 import { sounds } from "@/lib/sounds";
-import { Copy, Play, Trophy, ArrowLeft, LogOut, Home as HomeIcon, RotateCcw, Volume2, VolumeX } from "lucide-react";
+import { checkAndUnlock, Badge } from "@/lib/achievements";
+import { Copy, Play, Trophy, ArrowLeft, LogOut, Home as HomeIcon, RotateCcw, Volume2, VolumeX, Send, MessageSquare, Clock3 } from "lucide-react";
 
 type AnyText = ExplanationText | Level3ExplanationText;
 
@@ -20,6 +21,7 @@ type Player = {
   score: number;
   color: string;
   bonusRolls: number;
+  streak?: number;
   isConnected?: boolean;
 };
 
@@ -60,9 +62,19 @@ export default function Game() {
   const [emojiReactions, setEmojiReactions] = useState<Array<{ id: number; playerId: string; name: string; emoji: string }>>([]);
   const [streakMsg, setStreakMsg] = useState<string | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [chatMessages, setChatMessages] = useState<Array<{ id: number; playerId: string; playerName: string; text: string; color: string; ts: number }>>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [turnLog, setTurnLog] = useState<Array<{ id: number; icon: string; text: string; ts: number }>>([]);
+  const [sidebarTab, setSidebarTab] = useState<"chat" | "history">("history");
+  const [newBadges, setNewBadges] = useState<Badge[]>([]);
+  const [mySnakesHit, setMySnakesHit] = useState(0);
+  const [myWrongAnswers, setMyWrongAnswers] = useState(0);
   const usedTextIds = useRef<string[]>([]);
   const questionShownRef = useRef(false);
   const emojiIdRef = useRef(0);
+  const msgIdRef = useRef(0);
+  const logIdRef = useRef(0);
+  const chatEndRef = useRef<HTMLDivElement>(null);
   const socketRef = useRef(getSocket());
 
   const roomCode = params.roomCode;
@@ -125,6 +137,12 @@ export default function Game() {
       questionShownRef.current = false;
       setShowQuestion(false);
 
+      // Track stats for achievements
+      if (playerId === myPlayerId) {
+        if (correct === false) setMyWrongAnswers(p => p + 1);
+        if (game.lastEvent?.includes("slid") || game.lastEvent?.includes("Snake")) setMySnakesHit(p => p + 1);
+      }
+
       if (correct === false) sounds.wrong();
       else if (moved) {
         if (reward?.type === "snake" || game.lastEvent?.includes("Snake") || game.lastEvent?.includes("slid")) sounds.snake();
@@ -133,6 +151,11 @@ export default function Game() {
       } else {
         sounds.correct();
       }
+
+      // Add to turn log
+      const logIcon = !correct ? "❌" : game.lastEvent?.includes("Snake") || game.lastEvent?.includes("slid") ? "🐍" : game.lastEvent?.includes("Ladder") || game.lastEvent?.includes("climbed") ? "🪜" : "✅";
+      const logText = game.lastEvent ?? (correct ? `Moved to ${newPosition}` : "Stayed in place");
+      setTurnLog(prev => [...prev.slice(-29), { id: ++logIdRef.current, icon: logIcon, text: logText, ts: Date.now() }]);
 
       if (streakBonus > 0 && playerId === myPlayerId) {
         const streakNum = game.players.find((p: any) => p.id === playerId)?.streak ?? 0;
@@ -164,6 +187,30 @@ export default function Game() {
       sounds.win();
       setShowConfetti(true);
       setTimeout(() => setShowConfetti(false), 5000);
+      // Check achievements
+      const me = game.players.find(p => p.id === myPlayerId);
+      if (me) {
+        const won = game.winnerId === myPlayerId;
+        setMySnakesHit(prev => {
+          setMyWrongAnswers(prevW => {
+            const total = me.score > 0 ? (me.score / 10) + prevW : prevW;
+            const acc = total > 0 ? Math.round(((total - prevW) / total) * 100) : 100;
+            const earned = checkAndUnlock({ won, level, streak: me.streak ?? 0, snakesHit: prev, accuracy: acc });
+            if (earned.length > 0) {
+              setNewBadges(earned);
+              setTimeout(() => setNewBadges([]), 6000);
+            }
+            return prevW;
+          });
+          return prev;
+        });
+      }
+    }
+    function onChatMessage(msg: { playerId: string; playerName: string; text: string; color: string; ts: number }) {
+      const id = ++msgIdRef.current;
+      setChatMessages(prev => [...prev.slice(-49), { id, ...msg }]);
+      setSidebarTab("chat");
+      setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
     }
     function onEmojiReact({ playerId, emoji }: { playerId: string; emoji: string }) {
       const player = gameState?.players.find(p => p.id === playerId);
@@ -184,6 +231,7 @@ export default function Game() {
     socket.on("move_result", onMoveResult);
     socket.on("game_over", onGameOver);
     socket.on("emoji_react", onEmojiReact);
+    socket.on("chat_message", onChatMessage);
 
     if (socket.connected) {
       setConnected(true);
@@ -203,8 +251,16 @@ export default function Game() {
       socket.off("move_result", onMoveResult);
       socket.off("game_over", onGameOver);
       socket.off("emoji_react", onEmojiReact);
+      socket.off("chat_message", onChatMessage);
     };
   }, [roomCode, myPlayerId]);
+
+  const sendChat = useCallback(() => {
+    const text = chatInput.trim();
+    if (!text || !myPlayerId || !myPlayer) return;
+    socket.emit("chat_message", { roomCode, playerId: myPlayerId, playerName: myPlayer.name, text, color: myPlayer.color });
+    setChatInput("");
+  }, [chatInput, myPlayerId, myPlayer, socket, roomCode]);
 
   const rollDice = useCallback(() => {
     if (!isMyTurn || rolling || showQuestion || gameState?.status !== "playing") return;
@@ -429,17 +485,71 @@ export default function Game() {
             </div>
           )}
 
-          <div className="bg-card/40 border border-border/30 rounded-xl p-3 text-xs text-muted-foreground space-y-1.5">
-            <p className="font-semibold text-foreground text-xs uppercase tracking-wider mb-2">Legend</p>
-            <div className="flex items-center gap-2"><span>🐍</span><span>Snake — slide down</span></div>
-            <div className="flex items-center gap-2"><span>🪜</span><span>Ladder — climb up</span></div>
-            {level === 2 && (
-              <>
-                <div className="flex items-center gap-2"><span>🎭</span><span>Surprise trap!</span></div>
-                <div className="flex items-center gap-2"><span>🎲</span><span>Bonus roll!</span></div>
-              </>
+          <div className="bg-card/40 border border-border/30 rounded-xl overflow-hidden flex flex-col" style={{ minHeight: 180, maxHeight: 240 }}>
+            <div className="flex border-b border-border/30">
+              {[
+                { key: "history", icon: <Clock3 className="w-3 h-3" />, label: "Log" },
+                { key: "chat", icon: <MessageSquare className="w-3 h-3" />, label: "Chat" },
+              ].map(tab => (
+                <button
+                  key={tab.key}
+                  onClick={() => setSidebarTab(tab.key as "chat" | "history")}
+                  className={`flex-1 flex items-center justify-center gap-1 py-2 text-xs font-semibold transition-colors ${sidebarTab === tab.key ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground"}`}
+                >
+                  {tab.icon}{tab.label}
+                </button>
+              ))}
+            </div>
+
+            {sidebarTab === "history" && (
+              <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                {turnLog.length === 0 && (
+                  <p className="text-xs text-muted-foreground text-center py-4">No turns yet</p>
+                )}
+                {[...turnLog].reverse().map(entry => (
+                  <div key={entry.id} className="flex items-start gap-1.5 text-xs">
+                    <span className="shrink-0">{entry.icon}</span>
+                    <span className="text-muted-foreground leading-snug">{entry.text}</span>
+                  </div>
+                ))}
+              </div>
             )}
-            <div className="flex items-center gap-2"><span>🏆</span><span>Square 100 = Win!</span></div>
+
+            {sidebarTab === "chat" && (
+              <div className="flex-1 flex flex-col overflow-hidden">
+                <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
+                  {chatMessages.length === 0 && (
+                    <p className="text-xs text-muted-foreground text-center py-4">No messages yet</p>
+                  )}
+                  {chatMessages.map(msg => (
+                    <div key={msg.id} className="text-xs">
+                      <span className="font-bold" style={{ color: msg.color }}>{msg.playerName}: </span>
+                      <span className="text-foreground/80 break-all">{msg.text}</span>
+                    </div>
+                  ))}
+                  <div ref={chatEndRef} />
+                </div>
+                {gameState.status === "playing" && (
+                  <div className="p-1.5 border-t border-border/30 flex gap-1">
+                    <input
+                      value={chatInput}
+                      onChange={e => setChatInput(e.target.value)}
+                      onKeyDown={e => e.key === "Enter" && sendChat()}
+                      placeholder="Type..."
+                      maxLength={100}
+                      className="flex-1 bg-card/50 border border-border/30 rounded-lg px-2 py-1.5 text-xs text-foreground placeholder-muted-foreground/50 focus:outline-none focus:border-primary/50"
+                    />
+                    <button
+                      onClick={sendChat}
+                      disabled={!chatInput.trim()}
+                      className="p-1.5 rounded-lg bg-primary/20 hover:bg-primary/30 text-primary disabled:opacity-40 transition-colors"
+                    >
+                      <Send className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -503,6 +613,34 @@ export default function Game() {
       <Confetti active={showConfetti} />
 
       <AnimatePresence>
+        {newBadges.length > 0 && (
+          <motion.div
+            className="fixed top-16 right-4 z-50 space-y-2"
+            initial={{ opacity: 0, x: 60 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 60 }}
+          >
+            {newBadges.map(b => (
+              <motion.div
+                key={b.id}
+                className="flex items-center gap-2 bg-card/95 border border-yellow-500/40 rounded-xl px-4 py-2.5 shadow-xl"
+                initial={{ scale: 0.8 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring" }}
+              >
+                <span className="text-2xl">{b.emoji}</span>
+                <div>
+                  <p className="text-xs font-black text-yellow-400">Badge Unlocked!</p>
+                  <p className="text-xs font-bold text-foreground">{b.name}</p>
+                  <p className="text-xs text-muted-foreground">{b.description}</p>
+                </div>
+              </motion.div>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
         {gameState.status === "finished" && winner && (
           <motion.div
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -533,6 +671,21 @@ export default function Game() {
                 <p className="text-muted-foreground text-sm mb-4">
                   Reached square 100!
                 </p>
+
+                {newBadges.length > 0 && (
+                  <div className="mb-4 space-y-1.5">
+                    <p className="text-xs font-black text-yellow-400 uppercase tracking-wider">🏅 Badges Earned!</p>
+                    {newBadges.map(b => (
+                      <div key={b.id} className="flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/20 rounded-xl px-3 py-2">
+                        <span className="text-xl">{b.emoji}</span>
+                        <div className="text-left">
+                          <p className="text-xs font-bold text-foreground">{b.name}</p>
+                          <p className="text-xs text-muted-foreground">{b.description}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 <div className="bg-card/50 rounded-xl p-3 mb-6 text-sm">
                   <div className="font-bold text-foreground mb-2">Final Scores</div>
