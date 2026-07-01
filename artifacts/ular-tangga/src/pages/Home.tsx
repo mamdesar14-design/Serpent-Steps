@@ -33,6 +33,126 @@ function ColorPicker({ value, onChange }: { value: string; onChange: (c: string)
   );
 }
 
+/* ─── Animated SVG background: real snakes + ladders ─── */
+const SNAKES = [
+  { x: 60,  y: 120, rot: -20, color: "#22c55e", delay: 0 },
+  { x: 820, y: 80,  rot: 15,  color: "#f97316", delay: 0.8 },
+  { x: 180, y: 580, rot: 30,  color: "#a855f7", delay: 1.4 },
+  { x: 700, y: 400, rot: -35, color: "#ef4444", delay: 0.4 },
+  { x: 950, y: 550, rot: 10,  color: "#10b981", delay: 1.8 },
+  { x: 400, y: 30,  rot: -10, color: "#f59e0b", delay: 2.2 },
+];
+
+const LADDERS = [
+  { x: 240,  y: 160, rot: 15,  color: "#facc15", delay: 0.6 },
+  { x: 870,  y: 260, rot: -25, color: "#38bdf8", delay: 1.1 },
+  { x: 80,   y: 380, rot: 8,   color: "#fb923c", delay: 1.7 },
+  { x: 550,  y: 520, rot: -12, color: "#a3e635", delay: 2.5 },
+  { x: 1050, y: 100, rot: 20,  color: "#c084fc", delay: 0.2 },
+];
+
+function SnakeSVG({ color }: { color: string }) {
+  return (
+    <svg width="90" height="130" viewBox="0 0 90 130" fill="none">
+      {/* body */}
+      <path
+        d="M45 120 C10 105 80 80 45 65 C10 50 80 25 45 10"
+        stroke={color}
+        strokeWidth="10"
+        strokeLinecap="round"
+        fill="none"
+        opacity="0.9"
+      />
+      {/* scales pattern */}
+      <path
+        d="M45 120 C10 105 80 80 45 65 C10 50 80 25 45 10"
+        stroke="rgba(255,255,255,0.25)"
+        strokeWidth="4"
+        strokeLinecap="round"
+        strokeDasharray="6 10"
+        fill="none"
+      />
+      {/* head */}
+      <ellipse cx="45" cy="8" rx="9" ry="7" fill={color} />
+      {/* eyes */}
+      <circle cx="41" cy="6" r="2" fill="white" />
+      <circle cx="49" cy="6" r="2" fill="white" />
+      <circle cx="41.8" cy="6.2" r="1" fill="#1e293b" />
+      <circle cx="49.8" cy="6.2" r="1" fill="#1e293b" />
+      {/* tongue */}
+      <path d="M45 15 L43 19 M45 15 L47 19" stroke="#f87171" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function LadderSVG({ color }: { color: string }) {
+  const rungs = [15, 35, 55, 75, 95];
+  return (
+    <svg width="48" height="120" viewBox="0 0 48 120" fill="none">
+      {/* rails */}
+      <rect x="4"  y="5" width="8" height="110" rx="4" fill={color} opacity="0.9" />
+      <rect x="36" y="5" width="8" height="110" rx="4" fill={color} opacity="0.9" />
+      {/* rungs */}
+      {rungs.map(y => (
+        <rect key={y} x="4" y={y} width="40" height="7" rx="3.5" fill={color} opacity="0.7" />
+      ))}
+      {/* shine */}
+      <rect x="7"  y="5" width="3" height="110" rx="1.5" fill="rgba(255,255,255,0.3)" />
+      <rect x="39" y="5" width="3" height="110" rx="1.5" fill="rgba(255,255,255,0.3)" />
+    </svg>
+  );
+}
+
+function HomeBg() {
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden">
+      {/* subtle grid */}
+      <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
+            <path d="M 60 0 L 0 0 0 60" fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth="1"/>
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#grid)" />
+      </svg>
+
+      {/* Snakes */}
+      {SNAKES.map((s, i) => (
+        <motion.div
+          key={`snake-${i}`}
+          className="absolute"
+          style={{ left: s.x, top: s.y, rotate: s.rot, opacity: 0.18 }}
+          animate={{ y: [0, -12, 0], rotate: [s.rot, s.rot + 5, s.rot] }}
+          transition={{ duration: 5 + i * 0.7, repeat: Infinity, delay: s.delay, ease: "easeInOut" }}
+        >
+          <SnakeSVG color={s.color} />
+        </motion.div>
+      ))}
+
+      {/* Ladders */}
+      {LADDERS.map((l, i) => (
+        <motion.div
+          key={`ladder-${i}`}
+          className="absolute"
+          style={{ left: l.x, top: l.y, rotate: l.rot, opacity: 0.2 }}
+          animate={{ y: [0, -8, 0], rotate: [l.rot, l.rot - 4, l.rot] }}
+          transition={{ duration: 6 + i * 0.5, repeat: Infinity, delay: l.delay, ease: "easeInOut" }}
+        >
+          <LadderSVG color={l.color} />
+        </motion.div>
+      ))}
+
+      {/* glowing orbs */}
+      <div className="absolute top-1/4 left-1/4 w-64 h-64 rounded-full opacity-10"
+        style={{ background: "radial-gradient(circle, hsl(258 90% 60%), transparent)" }} />
+      <div className="absolute bottom-1/4 right-1/4 w-48 h-48 rounded-full opacity-10"
+        style={{ background: "radial-gradient(circle, hsl(196 80% 50%), transparent)" }} />
+      <div className="absolute top-3/4 left-1/3 w-40 h-40 rounded-full opacity-8"
+        style={{ background: "radial-gradient(circle, hsl(142 70% 50%), transparent)" }} />
+    </div>
+  );
+}
+
 export default function Home() {
   const [, setLocation] = useLocation();
   const [mode, setMode] = useState<"menu" | "create" | "join" | "solo">("menu");
@@ -104,23 +224,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden">
-      <div className="absolute inset-0 pointer-events-none">
-        {[...Array(12)].map((_, i) => (
-          <motion.div
-            key={i}
-            className="absolute text-3xl"
-            style={{
-              left: `${(i * 8.3) % 100}%`,
-              top: `${(i * 13) % 100}%`,
-              opacity: 0.06,
-            }}
-            animate={{ y: [0, -15, 0], rotate: [0, 10, -10, 0] }}
-            transition={{ duration: 4 + i * 0.5, repeat: Infinity, delay: i * 0.3 }}
-          >
-            {["🐍", "🪜", "🎲", "📚", "⭐", "🏆"][i % 6]}
-          </motion.div>
-        ))}
-      </div>
+      <HomeBg />
 
       <motion.div
         className="relative z-10 w-full max-w-md"
@@ -206,7 +310,7 @@ export default function Home() {
                   <div className="flex items-start gap-2.5 bg-primary/5 border border-primary/15 rounded-xl p-3">
                     <Info className="w-4 h-4 text-primary mt-0.5 shrink-0" />
                     <div className="text-xs text-muted-foreground leading-relaxed">
-                      Answer English explanation text questions to move your piece. 
+                      Answer English explanation text questions to move your piece.
                       Correct = roll dice moves you forward. Wrong = stay in place!
                     </div>
                   </div>
