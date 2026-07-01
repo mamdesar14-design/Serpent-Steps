@@ -61,6 +61,8 @@ export default function SoloPractice() {
   const [pendingDice, setPendingDice] = useState<number | null>(null);
   const [animatingPlayerId, setAnimatingPlayerId] = useState<string | null>(null);
   const [animationPath, setAnimationPath] = useState<number[]>([]);
+  const [boardEventState, setBoardEventState] = useState<import("@/components/Board").TokenBoardEvent>(null);
+  const [animationKey, setAnimationKey] = useState(0);
   const [lastEvent, setLastEvent] = useState<string | null>(null);
   const [rewardMsg, setRewardMsg] = useState<string | null>(null);
   const [streakMsg, setStreakMsg] = useState<string | null>(null);
@@ -124,13 +126,11 @@ export default function SoloPractice() {
     let bonusScore = 10;
 
     if (snakes[newPos] !== undefined) {
-      sounds.snake();
       event = { type: "snake", from: newPos, to: snakes[newPos] };
       newPos = snakes[newPos];
       setStats(s => ({ ...s, correct: s.correct + 1, snakes: s.snakes + 1 }));
       setLastEvent(`🐍 Snake! Slid down from ${event.from} → ${event.to}`);
     } else if (ladders[newPos] !== undefined) {
-      sounds.ladder();
       const resolved = resolveLadder(ladders[newPos] as any);
       event = { type: "ladder", from: newPos, to: resolved.to, reward: resolved.reward };
       newPos = resolved.to;
@@ -157,15 +157,24 @@ export default function SoloPractice() {
       setTimeout(() => setStreakMsg(null), 3000);
     }
 
+    const walkEnd = event.type !== "none" ? event.from : newPos;
     const path: number[] = [];
-    for (let i = position + 1; i <= newPos; i++) path.push(i);
+    for (let i = position + 1; i <= walkEnd; i++) path.push(i);
 
+    const tokenEvt: import("@/components/Board").TokenBoardEvent =
+      event.type !== "none" ? { type: event.type as "snake" | "ladder", from: event.from, to: event.to } : null;
+
+    setBoardEventState(tokenEvt);
+    setAnimationKey(k => k + 1);
     setAnimatingPlayerId("solo");
     setAnimationPath(path);
+
+    const eventTime = tokenEvt ? 1100 : 0;
     setTimeout(() => {
       setAnimatingPlayerId(null);
       setAnimationPath([]);
-    }, path.length * 200 + 500);
+      setBoardEventState(null);
+    }, path.length * 175 + eventTime + 400);
 
     setScore(s => s + bonusScore);
     setPosition(newPos);
@@ -200,6 +209,7 @@ export default function SoloPractice() {
     setPendingDice(null);
     setAnimatingPlayerId(null);
     setAnimationPath([]);
+    setBoardEventState(null);
     setLastEvent(null);
     setRewardMsg(null);
     setStreakMsg(null);
@@ -262,6 +272,8 @@ export default function SoloPractice() {
               level={level}
               animatingPlayerId={animatingPlayerId}
               animationPath={animationPath}
+              boardEvent={boardEventState}
+              animationKey={animationKey}
             />
           </div>
 

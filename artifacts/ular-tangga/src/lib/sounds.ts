@@ -43,6 +43,11 @@ export const sounds = {
     return _muted;
   },
 
+  step() {
+    const freq = 260 + Math.random() * 90;
+    tone([freq], [0.045], "square", 0.08);
+  },
+
   dice() {
     // rapid random clicks
     for (let i = 0; i < 6; i++) {

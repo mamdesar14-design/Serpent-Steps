@@ -2,7 +2,10 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useLocation, useSearch } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { getSocket } from "@/lib/socket";
-import { getRandomText, getRandomLevel3Text, ExplanationText, Level3ExplanationText } from "@/lib/gameData";
+import {
+  getRandomText, getRandomLevel3Text, ExplanationText, Level3ExplanationText,
+  SNAKES_LEVEL1, LADDERS_LEVEL1, SNAKES_LEVEL2, LADDERS_LEVEL2, SNAKES_LEVEL3, LADDERS_LEVEL3,
+} from "@/lib/gameData";
 import Board from "@/components/Board";
 import Dice from "@/components/Dice";
 import QuestionModal from "@/components/QuestionModal";
@@ -56,6 +59,8 @@ export default function Game() {
   const [questionIdx, setQuestionIdx] = useState(0);
   const [animatingPlayerId, setAnimatingPlayerId] = useState<string | null>(null);
   const [animationPath, setAnimationPath] = useState<number[]>([]);
+  const [boardEvent, setBoardEvent] = useState<import("@/components/Board").TokenBoardEvent>(null);
+  const [animationKey, setAnimationKey] = useState(0);
   const [rewardMsg, setRewardMsg] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [connected, setConnected] = useState(false);
@@ -144,17 +149,19 @@ export default function Game() {
         if (game.lastEvent?.includes("slid") || game.lastEvent?.includes("Snake")) setMySnakesHit(p => p + 1);
       }
 
+      const isSnakeEvt = game.lastEvent?.includes("slid") || game.lastEvent?.includes("Snake");
+      const isLadderEvt = game.lastEvent?.includes("Ladder") || game.lastEvent?.includes("climbed");
+
       if (correct === false) sounds.wrong();
       else if (moved) {
-        if (reward?.type === "snake" || game.lastEvent?.includes("Snake") || game.lastEvent?.includes("slid")) sounds.snake();
-        else if (game.lastEvent?.includes("Ladder") || game.lastEvent?.includes("climbed")) sounds.ladder();
-        else sounds.correct();
+        if (!isSnakeEvt && !isLadderEvt) sounds.correct();
+        // snake/ladder sounds are now played by Board after the walk animation
       } else {
         sounds.correct();
       }
 
       // Add to turn log
-      const logIcon = !correct ? "❌" : game.lastEvent?.includes("Snake") || game.lastEvent?.includes("slid") ? "🐍" : game.lastEvent?.includes("Ladder") || game.lastEvent?.includes("climbed") ? "🪜" : "✅";
+      const logIcon = !correct ? "❌" : isSnakeEvt ? "🐍" : isLadderEvt ? "🪜" : "✅";
       const logText = game.lastEvent ?? (correct ? `Moved to ${newPosition}` : "Stayed in place");
       setTurnLog(prev => [...prev.slice(-29), { id: ++logIdRef.current, icon: logIcon, text: logText, ts: Date.now() }]);
 
@@ -166,21 +173,55 @@ export default function Game() {
       }
 
       if (moved) {
-        setAnimatingPlayerId(playerId);
         const prevPos = gameState?.players.find((p) => p.id === playerId)?.position ?? 0;
+
+        // Detect snake/ladder trigger square to split walk path from teleport animation
+        const snakesMap: Record<number, number> =
+          level === 3 ? SNAKES_LEVEL3 : level === 2 ? SNAKES_LEVEL2 : SNAKES_LEVEL1;
+        const laddersMap: Record<number, number | { to: number; reward: { type: string } }> =
+          level === 3 ? LADDERS_LEVEL3 : level === 2 ? LADDERS_LEVEL2 : LADDERS_LEVEL1;
+
+        let walkEnd = newPosition;
+        let evt: import("@/components/Board").TokenBoardEvent = null;
+
+        if (isSnakeEvt) {
+          for (const [from, to] of Object.entries(snakesMap)) {
+            if ((to as number) === newPosition && parseInt(from) > prevPos) {
+              walkEnd = parseInt(from);
+              evt = { type: "snake", from: parseInt(from), to: newPosition };
+              break;
+            }
+          }
+        } else if (isLadderEvt) {
+          for (const [from, val] of Object.entries(laddersMap)) {
+            const dest = typeof val === "number" ? val : (val as { to: number }).to;
+            if (dest === newPosition && parseInt(from) > prevPos) {
+              walkEnd = parseInt(from);
+              evt = { type: "ladder", from: parseInt(from), to: newPosition };
+              break;
+            }
+          }
+        }
+
         const path: number[] = [];
-        for (let i = prevPos + 1; i <= newPosition; i++) path.push(i);
+        for (let i = prevPos + 1; i <= walkEnd; i++) path.push(i);
+
+        setAnimatingPlayerId(playerId);
         setAnimationPath(path);
+        setBoardEvent(evt);
+        setAnimationKey(k => k + 1);
 
         if (reward?.description) {
           setRewardMsg(reward.description);
           setTimeout(() => setRewardMsg(null), 3000);
         }
 
+        const eventTime = evt ? 1100 : 0;
         setTimeout(() => {
           setAnimatingPlayerId(null);
           setAnimationPath([]);
-        }, path.length * 200 + 500);
+          setBoardEvent(null);
+        }, path.length * 175 + eventTime + 400);
       }
     }
     function onGameOver({ game }: { game: GameState }) {
@@ -425,6 +466,8 @@ export default function Game() {
               level={level}
               animatingPlayerId={animatingPlayerId}
               animationPath={animationPath}
+              boardEvent={boardEvent}
+              animationKey={animationKey}
             />
           </div>
 
