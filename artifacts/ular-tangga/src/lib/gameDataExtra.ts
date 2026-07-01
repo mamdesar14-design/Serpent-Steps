@@ -1,0 +1,111 @@
+import type { TrueFalseQuestion, FillBlankQuestion, WordScrambleQuestion } from "./gameData";
+
+type NewQuestion = TrueFalseQuestion | FillBlankQuestion | WordScrambleQuestion;
+
+export const EXTRA_QUESTIONS: Record<string, NewQuestion[]> = {
+  photosynthesis: [
+    { id: "p_tf1", type: "truefalse", statement: "Photosynthesis takes place mainly in the roots of plants.", correct: false, explanation: "Photosynthesis occurs in the chloroplasts of leaves, not the roots.", difficulty: "easy" },
+    { id: "p_tf2", type: "truefalse", statement: "Oxygen is released as a byproduct of photosynthesis.", correct: true, explanation: "Oxygen is released into the atmosphere as a byproduct when plants make glucose.", difficulty: "easy" },
+    { id: "p_fb1", type: "fillblank", sentence: "Plants absorb ___ from the air through tiny pores called stomata.", options: ["oxygen", "nitrogen", "carbon dioxide", "hydrogen"], correct: 2, explanation: "Carbon dioxide from the air enters through stomata and is used in photosynthesis.", difficulty: "easy" },
+    { id: "p_fb2", type: "fillblank", sentence: "Chloroplasts contain a green pigment called ___ that absorbs sunlight.", options: ["carotene", "melanin", "anthocyanin", "chlorophyll"], correct: 3, explanation: "Chlorophyll is the green pigment in chloroplasts responsible for absorbing light energy.", difficulty: "easy" },
+    { id: "p_ws1", type: "scramble", words: ["Plants", "convert", "light", "energy", "into", "glucose"], explanation: "Photosynthesis converts light energy into chemical energy stored as glucose in plant cells.", difficulty: "medium" },
+  ],
+  water_cycle: [
+    { id: "wc_tf1", type: "truefalse", statement: "Evaporation is the process that turns water vapor into liquid water.", correct: false, explanation: "Evaporation turns liquid INTO vapor. Condensation turns vapor BACK into liquid.", difficulty: "easy" },
+    { id: "wc_tf2", type: "truefalse", statement: "The sun is the primary energy source that drives the water cycle.", correct: true, explanation: "Solar energy heats water surfaces, causing evaporation and powering the entire water cycle.", difficulty: "easy" },
+    { id: "wc_fb1", type: "fillblank", sentence: "Water vapor rises and ___ to form clouds in the atmosphere.", options: ["evaporates", "condenses", "precipitates", "freezes"], correct: 1, explanation: "Water vapor cools as it rises and condenses into tiny droplets, forming clouds.", difficulty: "easy" },
+    { id: "wc_fb2", type: "fillblank", sentence: "Water that falls from clouds back to Earth is called ___.", options: ["evaporation", "condensation", "precipitation", "transpiration"], correct: 2, explanation: "Precipitation is any form of water — rain, snow, or hail — that falls from clouds to the ground.", difficulty: "easy" },
+    { id: "wc_ws1", type: "scramble", words: ["The", "sun", "heats", "water", "causing", "evaporation"], explanation: "Solar energy heats water at the surface, causing liquid water to evaporate into water vapor.", difficulty: "medium" },
+  ],
+  volcanoes: [
+    { id: "v_tf1", type: "truefalse", statement: "Magma is called lava before it reaches Earth's surface.", correct: false, explanation: "Magma becomes lava AFTER it reaches the surface through a volcanic eruption, not before.", difficulty: "easy" },
+    { id: "v_tf2", type: "truefalse", statement: "Volcanic soils are extremely fertile and beneficial for farming.", correct: true, explanation: "Volcanic ash and minerals create some of the most fertile soils on Earth, ideal for agriculture.", difficulty: "easy" },
+    { id: "v_fb1", type: "fillblank", sentence: "Molten rock beneath Earth's surface is called ___.", options: ["lava", "magma", "ash", "pumice"], correct: 1, explanation: "Magma is the term for molten rock below Earth's surface; it is called lava once it erupts.", difficulty: "easy" },
+    { id: "v_fb2", type: "fillblank", sentence: "Volcanic eruptions can be ___ or gentle depending on the magma's gas content.", options: ["quiet", "cold", "explosive", "slow"], correct: 2, explanation: "High gas content in magma leads to explosive eruptions; low gas content results in gentler lava flows.", difficulty: "medium" },
+    { id: "v_ws1", type: "scramble", words: ["Lava", "is", "magma", "that", "reaches", "the", "surface"], explanation: "When magma erupts from a volcano and flows onto Earth's surface, it is then called lava.", difficulty: "medium" },
+  ],
+  greenhouse: [
+    { id: "g_tf1", type: "truefalse", statement: "Without any greenhouse effect, Earth would be too hot to support life.", correct: false, explanation: "Without greenhouse gases, Earth would be far too COLD (around -18°C) to support life as we know it.", difficulty: "medium" },
+    { id: "g_tf2", type: "truefalse", statement: "Carbon dioxide is one of the main greenhouse gases in Earth's atmosphere.", correct: true, explanation: "CO₂ is indeed a major greenhouse gas along with methane and water vapor.", difficulty: "easy" },
+    { id: "g_fb1", type: "fillblank", sentence: "The greenhouse effect ___ Earth's surface by trapping reflected heat energy.", options: ["cools", "warms", "dries", "floods"], correct: 1, explanation: "Greenhouse gases act like a blanket, trapping heat and warming Earth's surface.", difficulty: "easy" },
+    { id: "g_fb2", type: "fillblank", sentence: "Burning fossil fuels releases large amounts of ___ into the atmosphere.", options: ["oxygen", "nitrogen", "helium", "carbon dioxide"], correct: 3, explanation: "Burning coal, oil, and gas releases carbon dioxide, a major greenhouse gas.", difficulty: "easy" },
+    { id: "g_ws1", type: "scramble", words: ["Greenhouse", "gases", "trap", "heat", "in", "the", "atmosphere"], explanation: "Greenhouse gases like CO₂ and methane trap heat energy in Earth's atmosphere, causing warming.", difficulty: "medium" },
+  ],
+  digestive: [
+    { id: "d_tf1", type: "truefalse", statement: "The small intestine absorbs water from remaining food material.", correct: false, explanation: "It is the LARGE intestine that absorbs water. The small intestine absorbs most nutrients.", difficulty: "easy" },
+    { id: "d_tf2", type: "truefalse", statement: "Digestion begins in the mouth where teeth chew food and saliva is produced.", correct: true, explanation: "Both mechanical (chewing) and chemical (saliva enzymes) digestion begin in the mouth.", difficulty: "easy" },
+    { id: "d_fb1", type: "fillblank", sentence: "The partially digested food mixture in the stomach is called ___.", options: ["bolus", "chyme", "mucus", "bile"], correct: 1, explanation: "Chyme is the semi-liquid, acidic mixture of food and digestive juices formed in the stomach.", difficulty: "medium" },
+    { id: "d_fb2", type: "fillblank", sentence: "Most nutrients are absorbed into the bloodstream through the ___ intestine.", options: ["large", "upper", "thick", "small"], correct: 3, explanation: "The small intestine has a large surface area with villi that absorb most digested nutrients.", difficulty: "easy" },
+    { id: "d_ws1", type: "scramble", words: ["Saliva", "begins", "breaking", "down", "carbohydrates"], explanation: "Saliva contains amylase enzymes that start breaking down carbohydrates even in the mouth.", difficulty: "medium" },
+  ],
+  earthquakes: [
+    { id: "e_tf1", type: "truefalse", statement: "The epicenter is the point inside Earth where an earthquake originates.", correct: false, explanation: "The FOCUS (hypocenter) is inside Earth. The epicenter is the point on the surface directly above it.", difficulty: "medium" },
+    { id: "e_tf2", type: "truefalse", statement: "Most earthquakes occur along fault lines where tectonic plates meet.", correct: true, explanation: "Fault lines are fractures where plates interact; the stress buildup and release causes earthquakes.", difficulty: "easy" },
+    { id: "e_fb1", type: "fillblank", sentence: "Earthquakes create ___ waves that travel through Earth in all directions.", options: ["light", "sound", "seismic", "heat"], correct: 2, explanation: "Seismic waves are energy waves released by earthquakes that radiate outward through the Earth.", difficulty: "easy" },
+    { id: "e_fb2", type: "fillblank", sentence: "The ___ is the point on Earth's surface directly above an earthquake's origin.", options: ["focus", "epicenter", "hypocenter", "fault"], correct: 1, explanation: "The epicenter is on the surface directly above the underground focus where the earthquake starts.", difficulty: "medium" },
+    { id: "e_ws1", type: "scramble", words: ["Seismic", "waves", "travel", "through", "the", "Earth"], explanation: "When an earthquake occurs, it sends seismic waves radiating outward through Earth's layers.", difficulty: "medium" },
+  ],
+  solar_system: [
+    { id: "ss_tf1", type: "truefalse", statement: "Mars is a gas giant planet like Jupiter and Saturn.", correct: false, explanation: "Mars is a terrestrial (rocky) planet. Jupiter and Saturn are gas giants.", difficulty: "easy" },
+    { id: "ss_tf2", type: "truefalse", statement: "The Sun contains about 99.86% of the total mass of the solar system.", correct: true, explanation: "The Sun is by far the most massive object in the solar system, containing nearly all its mass.", difficulty: "medium" },
+    { id: "ss_fb1", type: "fillblank", sentence: "The asteroid belt is located between Mars and ___.", options: ["Earth", "Venus", "Jupiter", "Saturn"], correct: 2, explanation: "The asteroid belt lies between the orbits of Mars and Jupiter.", difficulty: "easy" },
+    { id: "ss_fb2", type: "fillblank", sentence: "The four inner planets are called ___ planets because they have solid rocky surfaces.", options: ["gas", "ice", "dwarf", "terrestrial"], correct: 3, explanation: "Mercury, Venus, Earth, and Mars are terrestrial planets — solid and rocky unlike the outer gas giants.", difficulty: "easy" },
+    { id: "ss_ws1", type: "scramble", words: ["Jupiter", "is", "the", "largest", "planet"], explanation: "Jupiter is the largest planet in our solar system, with a mass greater than all other planets combined.", difficulty: "easy" },
+  ],
+  rainforests: [
+    { id: "r_tf1", type: "truefalse", statement: "Rainforests cover about 50% of Earth's surface.", correct: false, explanation: "Rainforests cover only about 6% of Earth's surface, yet house more than half of all species.", difficulty: "easy" },
+    { id: "r_tf2", type: "truefalse", statement: "The Amazon Rainforest in South America is the world's largest tropical rainforest.", correct: true, explanation: "The Amazon Rainforest is the largest tropical rainforest, covering much of South America.", difficulty: "easy" },
+    { id: "r_fb1", type: "fillblank", sentence: "Rainforests are called the ___ of the Earth because they absorb CO₂ and produce oxygen.", options: ["heart", "brain", "lungs", "backbone"], correct: 2, explanation: "Like lungs exchange gases in our bodies, rainforests exchange CO₂ for oxygen on a massive scale.", difficulty: "easy" },
+    { id: "r_fb2", type: "fillblank", sentence: "Rainforests are found near the ___ where annual rainfall is at least 1,750–2,000 mm.", options: ["poles", "desert", "equator", "tundra"], correct: 2, explanation: "The equatorial region provides year-round warmth and heavy rainfall ideal for rainforest growth.", difficulty: "easy" },
+    { id: "r_ws1", type: "scramble", words: ["Deforestation", "is", "the", "main", "threat", "to", "rainforests"], explanation: "Deforestation — large-scale clearing of forests — is the primary threat destroying rainforests worldwide.", difficulty: "medium" },
+  ],
+  lightning: [
+    { id: "l_tf1", type: "truefalse", statement: "We hear thunder before we see lightning during a storm.", correct: false, explanation: "We always see lightning FIRST because light travels far faster than sound.", difficulty: "easy" },
+    { id: "l_tf2", type: "truefalse", statement: "Thunder is produced by the rapid expansion of air heated by lightning.", correct: true, explanation: "A lightning bolt superheats the surrounding air instantly, causing rapid expansion that we hear as thunder.", difficulty: "easy" },
+    { id: "l_fb1", type: "fillblank", sentence: "Lightning is caused by the buildup of ___ electricity inside storm clouds.", options: ["magnetic", "kinetic", "static", "thermal"], correct: 2, explanation: "Static electricity builds up in storm clouds as ice crystals and water droplets collide.", difficulty: "medium" },
+    { id: "l_fb2", type: "fillblank", sentence: "We see lightning before thunder because light travels ___ than sound.", options: ["slower", "quieter", "farther", "faster"], correct: 3, explanation: "Light travels at 300,000 km/s while sound travels at only 343 m/s — so we see lightning first.", difficulty: "easy" },
+    { id: "l_ws1", type: "scramble", words: ["Light", "travels", "faster", "than", "sound"], explanation: "The huge difference in speed — light at 300,000 km/s vs sound at 343 m/s — explains why we see lightning before hearing thunder.", difficulty: "easy" },
+  ],
+  tides: [
+    { id: "t_tf1", type: "truefalse", statement: "Spring tides occur only during the spring season.", correct: false, explanation: "Spring tides occur when the Sun, Moon, and Earth align — this happens throughout the year, not just spring.", difficulty: "easy" },
+    { id: "t_tf2", type: "truefalse", statement: "The Moon's gravitational pull is the primary cause of ocean tides.", correct: true, explanation: "The Moon's gravity pulls ocean water toward it, creating the tidal bulges that cause high and low tides.", difficulty: "easy" },
+    { id: "t_fb1", type: "fillblank", sentence: "When the Sun, Moon, and Earth align, extra-high ___ tides occur.", options: ["neap", "low", "spring", "rip"], correct: 2, explanation: "Spring tides occur during alignment when the Sun and Moon's gravitational forces combine.", difficulty: "medium" },
+    { id: "t_fb2", type: "fillblank", sentence: "Ocean tides are primarily caused by the Moon's ___ pull on ocean water.", options: ["magnetic", "thermal", "gravitational", "rotational"], correct: 2, explanation: "Gravity is the force the Moon exerts on Earth's oceans, creating the tidal bulges.", difficulty: "easy" },
+    { id: "t_ws1", type: "scramble", words: ["The", "Moon's", "gravity", "causes", "ocean", "tides"], explanation: "The Moon's gravitational attraction pulls ocean water toward it, creating the rise and fall of tides.", difficulty: "easy" },
+  ],
+  migration: [
+    { id: "m_tf1", type: "truefalse", statement: "The Arctic Tern migrates from Africa to Antarctica each year.", correct: false, explanation: "The Arctic Tern migrates from the ARCTIC (north) to Antarctica (south) and back — not from Africa.", difficulty: "medium" },
+    { id: "m_tf2", type: "truefalse", statement: "Birds build up fat reserves before migration to fuel their long journeys.", correct: true, explanation: "Before migrating, birds eat heavily to build fat reserves that serve as fuel for the energy-intensive journey.", difficulty: "easy" },
+    { id: "m_fb1", type: "fillblank", sentence: "Birds ___ seasonally between their breeding grounds and warmer wintering areas.", options: ["hibernate", "burrow", "migrate", "swim"], correct: 2, explanation: "Migration is the seasonal movement of birds between breeding and wintering habitats.", difficulty: "easy" },
+    { id: "m_fb2", type: "fillblank", sentence: "Birds can sense Earth's ___ field to help navigate during migration.", options: ["gravitational", "electric", "thermal", "magnetic"], correct: 3, explanation: "Birds have specialized cells that detect Earth's magnetic field, helping them navigate accurately.", difficulty: "medium" },
+    { id: "m_ws1", type: "scramble", words: ["Birds", "navigate", "using", "Earth's", "magnetic", "field"], explanation: "Among their remarkable navigation tools, migratory birds can sense and use Earth's magnetic field for direction.", difficulty: "medium" },
+  ],
+  tornadoes: [
+    { id: "tor_tf1", type: "truefalse", statement: "Tornadoes are measured on the Richter scale.", correct: false, explanation: "Tornadoes are rated on the Fujita (or Enhanced Fujita) scale, F0–F5. The Richter scale measures earthquakes.", difficulty: "easy" },
+    { id: "tor_tf2", type: "truefalse", statement: "Wind shear is the change in wind speed and direction at different altitudes.", correct: true, explanation: "Wind shear describes how wind changes with altitude, and it is a key ingredient in tornado formation.", difficulty: "medium" },
+    { id: "tor_fb1", type: "fillblank", sentence: "A tornado is a violently rotating column of ___ from a thunderstorm to the ground.", options: ["water", "fire", "dust", "air"], correct: 3, explanation: "A tornado is rotating air — not water or fire — extending from a storm cloud to Earth's surface.", difficulty: "easy" },
+    { id: "tor_fb2", type: "fillblank", sentence: "Tornado Alley is located in the central ___, where warm and cold air masses collide.", options: ["Europe", "Australia", "Canada", "United States"], correct: 3, explanation: "The central United States experiences the most tornadoes because warm Gulf air meets cold Arctic air there.", difficulty: "easy" },
+    { id: "tor_ws1", type: "scramble", words: ["Tornadoes", "form", "from", "rotating", "thunderstorm", "clouds"], explanation: "Tornadoes develop when rotating winds within a thunderstorm are pulled downward to touch the ground.", difficulty: "medium" },
+  ],
+  coral_reefs: [
+    { id: "cr_tf1", type: "truefalse", statement: "Coral reefs cover about 50% of the ocean floor.", correct: false, explanation: "Coral reefs cover less than 1% of the ocean floor, yet support about 25% of all marine species.", difficulty: "easy" },
+    { id: "cr_tf2", type: "truefalse", statement: "Coral polyps secrete calcium carbonate to build reef structures.", correct: true, explanation: "Tiny coral polyps are animals that build hard calcium carbonate skeletons, accumulating into reef structures.", difficulty: "medium" },
+    { id: "cr_fb1", type: "fillblank", sentence: "Coral reefs are called the ___ of the sea because of their extraordinary biodiversity.", options: ["deserts", "mountains", "plains", "rainforests"], correct: 3, explanation: "Like tropical rainforests on land, coral reefs have incredibly high biodiversity for their area.", difficulty: "easy" },
+    { id: "cr_fb2", type: "fillblank", sentence: "Rising ocean ___ is a primary cause of coral bleaching.", options: ["depth", "pressure", "salinity", "temperatures"], correct: 3, explanation: "When water temperatures rise, stressed corals expel their symbiotic algae, causing bleaching and often death.", difficulty: "medium" },
+    { id: "cr_ws1", type: "scramble", words: ["Coral", "polyps", "build", "reef", "structures"], explanation: "Tiny coral polyp animals secrete calcium carbonate skeletons that accumulate over thousands of years to form reefs.", difficulty: "medium" },
+  ],
+  moon: [
+    { id: "mo_tf1", type: "truefalse", statement: "The Moon has a thick atmosphere with weather systems like Earth.", correct: false, explanation: "The Moon has virtually no atmosphere — no weather, no wind, and extreme temperature swings.", difficulty: "easy" },
+    { id: "mo_tf2", type: "truefalse", statement: "Humans first landed on the Moon in 1969 during the Apollo 11 mission.", correct: true, explanation: "Apollo 11 successfully landed Neil Armstrong and Buzz Aldrin on the lunar surface on July 20, 1969.", difficulty: "easy" },
+    { id: "mo_fb1", type: "fillblank", sentence: "The Moon completes one full orbit around Earth every ___ days.", options: ["7", "14", "27.3", "30"], correct: 2, explanation: "The Moon's sidereal period — one complete orbit around Earth — takes approximately 27.3 days.", difficulty: "medium" },
+    { id: "mo_fb2", type: "fillblank", sentence: "We always see the ___ face of the Moon because of synchronous rotation.", options: ["dark", "far", "different", "same"], correct: 3, explanation: "Synchronous rotation means the Moon's rotation period equals its orbital period, keeping one face toward Earth.", difficulty: "medium" },
+    { id: "mo_ws1", type: "scramble", words: ["The", "Moon", "is", "Earth's", "only", "natural", "satellite"], explanation: "Earth has just one natural satellite — the Moon — unlike some planets that have dozens of moons.", difficulty: "easy" },
+  ],
+  sound_waves: [
+    { id: "sw_tf1", type: "truefalse", statement: "Sound can travel through a vacuum in outer space.", correct: false, explanation: "Sound is a mechanical wave that needs particles to vibrate — it cannot travel through the vacuum of space.", difficulty: "easy" },
+    { id: "sw_tf2", type: "truefalse", statement: "The pitch of sound is determined by its frequency.", correct: true, explanation: "Higher frequency (more vibrations per second) produces a higher pitch sound.", difficulty: "easy" },
+    { id: "sw_fb1", type: "fillblank", sentence: "Sound travels ___ through denser materials like steel than through air.", options: ["slower", "quieter", "farther", "faster"], correct: 3, explanation: "In denser materials, particles are packed closer together, allowing sound vibrations to pass more quickly.", difficulty: "medium" },
+    { id: "sw_fb2", type: "fillblank", sentence: "The loudness of a sound wave is determined by its ___.", options: ["frequency", "speed", "wavelength", "amplitude"], correct: 3, explanation: "Amplitude is the size of the wave vibration — greater amplitude means more energy and louder sound.", difficulty: "medium" },
+    { id: "sw_ws1", type: "scramble", words: ["Sound", "cannot", "travel", "through", "a", "vacuum"], explanation: "Sound requires matter (a medium) to travel — in the vacuum of outer space, there is no sound at all.", difficulty: "easy" },
+  ],
+};

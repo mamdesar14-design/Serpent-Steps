@@ -8,11 +8,40 @@ export type Question = {
   difficulty: "easy" | "medium" | "hard";
 };
 
+export type TrueFalseQuestion = {
+  id: string;
+  type: "truefalse";
+  statement: string;
+  correct: boolean;
+  explanation: string;
+  difficulty: "easy" | "medium" | "hard";
+};
+
+export type FillBlankQuestion = {
+  id: string;
+  type: "fillblank";
+  sentence: string;
+  options: string[];
+  correct: number;
+  explanation: string;
+  difficulty: "easy" | "medium" | "hard";
+};
+
+export type WordScrambleQuestion = {
+  id: string;
+  type: "scramble";
+  words: string[];
+  explanation: string;
+  difficulty: "easy" | "medium" | "hard";
+};
+
+export type QuizQuestion = Question | TrueFalseQuestion | FillBlankQuestion | WordScrambleQuestion;
+
 export type ExplanationText = {
   id: string;
   title: string;
   content: string;
-  questions: Question[];
+  questions: QuizQuestion[];
 };
 
 export const EXPLANATION_TEXTS: ExplanationText[] = [
@@ -983,17 +1012,22 @@ export const EXPLANATION_TEXTS: ExplanationText[] = [
   },
 ];
 
-export const LEVEL1_QUESTIONS = EXPLANATION_TEXTS;
+import { EXTRA_QUESTIONS } from "./gameDataExtra";
 
-export const LEVEL2_QUESTIONS: ExplanationText[] = [
-  ...EXPLANATION_TEXTS.map((text) => ({
-    ...text,
-    questions: text.questions.map((q) => ({
-      ...q,
-      difficulty: q.difficulty === "easy" ? ("medium" as const) : q.difficulty === "medium" ? ("hard" as const) : ("hard" as const),
-    })),
-  })),
-];
+const MERGED_TEXTS: ExplanationText[] = EXPLANATION_TEXTS.map((text) => ({
+  ...text,
+  questions: [...text.questions, ...(EXTRA_QUESTIONS[text.id] ?? [])] as QuizQuestion[],
+}));
+
+export const LEVEL1_QUESTIONS = MERGED_TEXTS;
+
+export const LEVEL2_QUESTIONS: ExplanationText[] = MERGED_TEXTS.map((text) => ({
+  ...text,
+  questions: text.questions.map((q) => ({
+    ...q,
+    difficulty: q.difficulty === "easy" ? ("medium" as const) : q.difficulty === "medium" ? ("hard" as const) : ("hard" as const),
+  } as QuizQuestion)),
+}));
 
 export function getRandomText(level: number, usedIds: string[]): ExplanationText {
   const pool = level === 1 ? LEVEL1_QUESTIONS : LEVEL2_QUESTIONS;
@@ -1017,6 +1051,7 @@ export type MatchingQuestion = {
   explanation: string;
   difficulty: "expert";
 };
+export type AnyQuestion = QuizQuestion | MatchingQuestion;
 export type Level3ExplanationText = {
   id: string;
   title: string;
