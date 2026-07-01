@@ -1,0 +1,14 @@
+[build]
+  command = "pnpm install --frozen-lockfile && pnpm --filter @workspace/ular-tangga run build"
+  publish = "artifacts/ular-tangga/dist/public"
+
+[build.environment]
+  PORT = "3000"
+  BASE_PATH = "/"
+  NODE_VERSION = "20"
+  PNPM_VERSION = "9"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
