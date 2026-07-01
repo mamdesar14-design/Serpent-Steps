@@ -30,18 +30,13 @@ function tone(
       osc.start(t);
       osc.stop(t + durations[i] + 0.01);
     });
-  } catch {
-    // AudioContext not available (SSR / test)
-  }
+  } catch { /* AudioContext not available */ }
 }
 
 export const sounds = {
   get muted() { return _muted; },
-
-  toggle() {
-    _muted = !_muted;
-    return _muted;
-  },
+  toggle() { _muted = !_muted; return _muted; },
+  setMuted(val: boolean) { _muted = val; },
 
   step() {
     const freq = 260 + Math.random() * 90;
@@ -49,48 +44,40 @@ export const sounds = {
   },
 
   dice() {
-    // rapid random clicks
     for (let i = 0; i < 6; i++) {
       tone([200 + Math.random() * 300], [0.05], "square", 0.15, i * 0.08);
     }
   },
 
   correct() {
-    // happy rising arpeggio: C5 E5 G5
     tone([523, 659, 784], [0.12, 0.12, 0.25], "sine", 0.3);
   },
 
   wrong() {
-    // sad falling: G4 Eb4 C4
     tone([392, 311, 261], [0.15, 0.15, 0.3], "sawtooth", 0.2);
   },
 
   snake() {
-    // descending slide
     try {
       if (_muted) return;
       const c = ctx();
       const osc = c.createOscillator();
       const gain = c.createGain();
-      osc.connect(gain);
-      gain.connect(c.destination);
+      osc.connect(gain); gain.connect(c.destination);
       osc.type = "sawtooth";
       osc.frequency.setValueAtTime(600, c.currentTime);
       osc.frequency.exponentialRampToValueAtTime(100, c.currentTime + 0.6);
       gain.gain.setValueAtTime(0.25, c.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.6);
-      osc.start(c.currentTime);
-      osc.stop(c.currentTime + 0.61);
+      osc.start(c.currentTime); osc.stop(c.currentTime + 0.61);
     } catch { /* */ }
   },
 
   ladder() {
-    // bright ascending chime: C5 E5 G5 C6
     tone([523, 659, 784, 1047], [0.1, 0.1, 0.1, 0.3], "sine", 0.3);
   },
 
   win() {
-    // triumphant fanfare
     tone([523, 659, 784, 1047, 1047], [0.1, 0.1, 0.1, 0.1, 0.5], "sine", 0.35);
     tone([659, 784, 988, 1319], [0.1, 0.1, 0.1, 0.5], "sine", 0.2, 0.55);
   },
@@ -100,11 +87,22 @@ export const sounds = {
   },
 
   streak() {
-    // escalating ping
     tone([660, 880, 1320], [0.08, 0.08, 0.18], "sine", 0.3);
   },
 
-  setMuted(val: boolean) {
-    _muted = val;
+  hint() {
+    // Soft magic sparkle
+    tone([880, 1108, 1318], [0.08, 0.08, 0.16], "sine", 0.18);
+  },
+
+  milestone() {
+    // Rising fanfare for milestone
+    tone([392, 523, 659, 784], [0.08, 0.08, 0.08, 0.35], "sine", 0.32);
+    tone([523, 659, 784, 1047], [0.08, 0.08, 0.08, 0.3], "sine", 0.2, 0.32);
+  },
+
+  speedBonus() {
+    // Quick rising ping
+    tone([880, 1320, 1760], [0.06, 0.06, 0.14], "sine", 0.22);
   },
 };

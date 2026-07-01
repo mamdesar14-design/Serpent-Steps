@@ -4,7 +4,8 @@ import {
   ExplanationText, Level3ExplanationText, Question, MatchingQuestion,
   TrueFalseQuestion, FillBlankQuestion, WordScrambleQuestion, QuizQuestion,
 } from "@/lib/gameData";
-import { CheckCircle, XCircle, Clock, BookOpen, ChevronRight, Shuffle, Link, RotateCcw } from "lucide-react";
+import { CheckCircle, XCircle, Clock, BookOpen, ChevronRight, Shuffle, Link, RotateCcw, Lightbulb } from "lucide-react";
+import { sounds } from "@/lib/sounds";
 
 type AnyText = ExplanationText | Level3ExplanationText;
 type AnyQ = Question | TrueFalseQuestion | FillBlankQuestion | WordScrambleQuestion | MatchingQuestion;
@@ -13,9 +14,10 @@ type QuestionModalProps = {
   text: AnyText | null;
   questionIndex: number;
   diceValue: number;
-  onAnswer: (correct: boolean) => void;
+  onAnswer: (correct: boolean, speedBonus?: number) => void;
   level: number;
   playerName: string;
+  hintEnabled?: boolean;
 };
 
 const TIME_LIMIT = { 1: 45, 2: 30, 3: 90 };
@@ -88,12 +90,16 @@ function ResultBox({ correct, explanation, correctText }: { correct: boolean; ex
   );
 }
 
-function MCQSection({ question, onAnswer }: { question: Question; onAnswer: (correct: boolean) => void }) {
+function MCQSection({ question, onAnswer, eliminatedOptions = new Set<number>() }: {
+  question: Question;
+  onAnswer: (correct: boolean) => void;
+  eliminatedOptions?: Set<number>;
+}) {
   const [selected, setSelected] = useState<number | null>(null);
   const [phase, setPhase] = useState<"question" | "result">("question");
 
   const handleClick = (idx: number) => {
-    if (phase !== "question" || selected !== null) return;
+    if (phase !== "question" || selected !== null || eliminatedOptions.has(idx)) return;
     setSelected(idx);
     setPhase("result");
     setTimeout(() => onAnswer(idx === question.correct), 1800);
@@ -115,21 +121,31 @@ function MCQSection({ question, onAnswer }: { question: Question; onAnswer: (cor
         <p className="text-sm font-semibold text-foreground leading-snug">{question.question}</p>
       </div>
       <div className="grid gap-2.5">
-        {question.options.map((option, idx) => (
-          <motion.button
-            key={idx}
-            onClick={() => handleClick(idx)}
-            className="w-full text-left px-4 py-3 rounded-xl border text-sm font-medium flex items-center gap-3"
-            style={{ background: "hsl(220 25% 18%)", borderColor: "hsl(220 20% 28%)" }}
-            whileHover={{ scale: 1.01, borderColor: "hsl(258 90% 60%)" }}
-            whileTap={{ scale: 0.99 }}
-          >
-            <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0" style={{ background: "hsl(258 90% 30%)", color: "hsl(258 90% 80%)" }}>
-              {String.fromCharCode(65 + idx)}
-            </span>
-            <span className="text-foreground/90">{option}</span>
-          </motion.button>
-        ))}
+        {question.options.map((option, idx) => {
+          const eliminated = eliminatedOptions.has(idx);
+          return (
+            <motion.button
+              key={idx}
+              onClick={() => handleClick(idx)}
+              disabled={eliminated}
+              className="w-full text-left px-4 py-3 rounded-xl border text-sm font-medium flex items-center gap-3 transition-opacity"
+              style={{
+                background: eliminated ? "hsl(220 15% 13%)" : "hsl(220 25% 18%)",
+                borderColor: eliminated ? "hsl(220 15% 22%)" : "hsl(220 20% 28%)",
+                opacity: eliminated ? 0.4 : 1,
+                cursor: eliminated ? "not-allowed" : "pointer",
+              }}
+              whileHover={!eliminated ? { scale: 1.01, borderColor: "hsl(258 90% 60%)" } : {}}
+              whileTap={!eliminated ? { scale: 0.99 } : {}}
+            >
+              <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
+                style={{ background: eliminated ? "hsl(220 15% 22%)" : "hsl(258 90% 30%)", color: eliminated ? "hsl(220 15% 45%)" : "hsl(258 90% 80%)" }}>
+                {eliminated ? "✕" : String.fromCharCode(65 + idx)}
+              </span>
+              <span className={eliminated ? "line-through text-muted-foreground/50" : "text-foreground/90"}>{option}</span>
+            </motion.button>
+          );
+        })}
       </div>
     </motion.div>
   );
@@ -477,35 +493,75 @@ function MatchingSection({ question, onAnswer }: { question: MatchingQuestion; o
   );
 }
 
-export default function QuestionModal({ text, questionIndex, diceValue, onAnswer, level, playerName }: QuestionModalProps) {
+export default function QuestionModal({ text, questionIndex, diceValue, onAnswer, level, playerName, hintEnabled = false }: QuestionModalProps) {
   const [phase, setPhase] = useState<"reading" | "question">("reading");
   const [timeLeft, setTimeLeft] = useState(TIME_LIMIT[level as 1 | 2 | 3] ?? 45);
-  const timedOut = useRef(false);
+  const timedOut   = useRef(false);
+  const startTime  = useRef<number>(0);
+  const timeLeftRef = useRef(timeLeft);
+  timeLeftRef.current = timeLeft;
+
+  // Hint state (only for MCQ)
+  const [hintUsed, setHintUsed]           = useState(false);
+  const [eliminatedOpts, setEliminatedOpts] = useState<Set<number>>(new Set());
 
   const timeLimit = TIME_LIMIT[level as 1 | 2 | 3] ?? 45;
-  const isLevel3 = level === 3;
+  const isLevel3  = level === 3;
 
-  const question = text?.questions[questionIndex % text.questions.length] ?? null;
-  const qType = question ? getQType(question as AnyQ) : "mcq";
+  const question  = text?.questions[questionIndex % text.questions.length] ?? null;
+  const qType     = question ? getQType(question as AnyQ) : "mcq";
   const isMatching = qType === "matching";
+  const isMCQ     = qType === "mcq";
 
   useEffect(() => {
     setPhase("reading");
     setTimeLeft(timeLimit);
+    setHintUsed(false);
+    setEliminatedOpts(new Set());
     timedOut.current = false;
   }, [text?.id, questionIndex, timeLimit]);
 
   useEffect(() => {
     if (phase !== "question") return;
     if (timeLeft <= 0) {
-      if (!timedOut.current) { timedOut.current = true; onAnswer(false); }
+      if (!timedOut.current) { timedOut.current = true; onAnswer(false, 0); }
       return;
     }
     const timer = setTimeout(() => setTimeLeft(t => t - 1), 1000);
     return () => clearTimeout(timer);
   }, [phase, timeLeft, onAnswer]);
 
-  const startQuestion = () => { setPhase("question"); setTimeLeft(timeLimit); };
+  // Wrapper that intercepts the sub-section answer, computes speed bonus, then calls parent
+  const handleAnswerWithBonus = useCallback((correct: boolean) => {
+    if (timedOut.current) return;
+    timedOut.current = true;
+    const elapsed  = (Date.now() - startTime.current) / 1000;
+    const remaining = Math.max(0, timeLimit - elapsed);
+    // Speed bonus: up to 30 pts scaled by fraction of time left (only on correct)
+    const speedBonus = correct ? Math.max(0, Math.round(30 * (remaining / timeLimit))) : 0;
+    onAnswer(correct, speedBonus);
+  }, [onAnswer, timeLimit]);
+
+  const useHint = useCallback(() => {
+    if (hintUsed || !question || qType !== "mcq") return;
+    const q = question as Question;
+    const wrong = q.options.map((_, i) => i).filter(i => i !== q.correct);
+    // Pick 2 random wrong options to eliminate
+    for (let i = wrong.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [wrong[i], wrong[j]] = [wrong[j], wrong[i]];
+    }
+    const toElim = new Set(wrong.slice(0, 2));
+    setEliminatedOpts(toElim);
+    setHintUsed(true);
+    sounds.hint();
+  }, [hintUsed, question, qType]);
+
+  const startQuestion = () => {
+    setPhase("question");
+    setTimeLeft(timeLimit);
+    startTime.current = Date.now();
+  };
 
   if (!text || !question) return null;
 
@@ -560,8 +616,34 @@ export default function QuestionModal({ text, questionIndex, diceValue, onAnswer
                   <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                     <Clock className="w-3.5 h-3.5" />
                     <span style={{ color: timerColor }} className="font-bold font-mono">{timeLeft}s</span>
+                    {timeLeft <= timeLimit * 0.5 && timeLeft > 0 && (
+                      <motion.span className="text-xs font-bold" style={{ color: timerColor }}
+                        animate={{ opacity: [1, 0.5, 1] }} transition={{ duration: 0.6, repeat: Infinity }}>
+                        {timeLeft <= timeLimit * 0.25 ? "⚠️ Hurry!" : "⏳"}
+                      </motion.span>
+                    )}
                   </div>
-                  <span className="text-xs text-muted-foreground">Level {level} • {difficultyLabel}</span>
+                  <div className="flex items-center gap-2">
+                    {hintEnabled && isMCQ && phase === "question" && (
+                      <motion.button
+                        onClick={useHint}
+                        disabled={hintUsed}
+                        className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg border font-medium transition-all"
+                        style={{
+                          background: hintUsed ? "hsl(220 15% 15%)" : "hsl(45 80% 20%)",
+                          borderColor: hintUsed ? "hsl(220 15% 25%)" : "hsl(45 80% 40%)",
+                          color: hintUsed ? "hsl(220 10% 40%)" : "hsl(45 90% 75%)",
+                          cursor: hintUsed ? "not-allowed" : "pointer",
+                        }}
+                        whileHover={!hintUsed ? { scale: 1.05 } : {}}
+                        whileTap={!hintUsed ? { scale: 0.95 } : {}}
+                      >
+                        <Lightbulb className="w-3 h-3" />
+                        {hintUsed ? "Hint used" : "Use Hint (50/50)"}
+                      </motion.button>
+                    )}
+                    <span className="text-xs text-muted-foreground">Level {level} • {difficultyLabel}</span>
+                  </div>
                 </div>
                 <div className="w-full bg-muted/30 rounded-full h-2 overflow-hidden">
                   <motion.div className="h-full rounded-full" style={{ width: `${timerPercent}%`, background: timerColor }} animate={{ width: `${timerPercent}%` }} transition={{ duration: 0.5 }} />
@@ -592,19 +674,19 @@ export default function QuestionModal({ text, questionIndex, diceValue, onAnswer
             )}
 
             {phase === "question" && qType === "matching" && (
-              <MatchingSection key={question.id} question={question as MatchingQuestion} onAnswer={c => { timedOut.current = true; onAnswer(c); }} />
+              <MatchingSection key={question.id} question={question as MatchingQuestion} onAnswer={handleAnswerWithBonus} />
             )}
             {phase === "question" && qType === "mcq" && (
-              <MCQSection key={question.id} question={question as Question} onAnswer={c => { timedOut.current = true; onAnswer(c); }} />
+              <MCQSection key={question.id} question={question as Question} onAnswer={handleAnswerWithBonus} eliminatedOptions={eliminatedOpts} />
             )}
             {phase === "question" && qType === "truefalse" && (
-              <TrueFalseSection key={question.id} question={question as TrueFalseQuestion} onAnswer={c => { timedOut.current = true; onAnswer(c); }} />
+              <TrueFalseSection key={question.id} question={question as TrueFalseQuestion} onAnswer={handleAnswerWithBonus} />
             )}
             {phase === "question" && qType === "fillblank" && (
-              <FillBlankSection key={question.id} question={question as FillBlankQuestion} onAnswer={c => { timedOut.current = true; onAnswer(c); }} />
+              <FillBlankSection key={question.id} question={question as FillBlankQuestion} onAnswer={handleAnswerWithBonus} />
             )}
             {phase === "question" && qType === "scramble" && (
-              <WordScrambleSection key={question.id} question={question as WordScrambleQuestion} onAnswer={c => { timedOut.current = true; onAnswer(c); }} />
+              <WordScrambleSection key={question.id} question={question as WordScrambleQuestion} onAnswer={handleAnswerWithBonus} />
             )}
           </div>
         </motion.div>

@@ -1,0 +1,4 @@
+- [Board visual system](board-visuals.md) — Board uses HTML grid for cells + SVG overlay for snakes/ladders/tokens; CELL_SIZE=52, BOARD_SIZE=520; getCellCoords maps pos→SVG coords.
+- [Snake/Ladder SVG approach](snake-ladder-svg.md) — Snakes: cubic S-curve bezier with wide stroke + SnakeHead component (ellipse+eyes+tongue). Ladders: parallel rails + rungs via ladderGeo(). Both on z-10 SVG overlay.
+- [QuestionModal speed bonus](question-modal-features.md) — onAnswer signature now (correct: boolean, speedBonus?: number) — backward-compatible. Hint: hintEnabled prop, MCQ-only 50/50 elimination. Speed bonus: up to 30pts.
+- [SoloPractice milestones](solo-practice-features.md) — Milestone toast at 25/50/75, emoji reaction bar, move history log (last 6), shownMilestones ref avoids re-showing.

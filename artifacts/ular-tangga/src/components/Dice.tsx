@@ -9,26 +9,30 @@ type DiceProps = {
   canRoll: boolean;
 };
 
-const DICE_FACES: Record<number, number[][]> = {
-  1: [[0, 0, 0], [0, 1, 0], [0, 0, 0]],
-  2: [[1, 0, 0], [0, 0, 0], [0, 0, 1]],
-  3: [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
-  4: [[1, 0, 1], [0, 0, 0], [1, 0, 1]],
-  5: [[1, 0, 1], [0, 1, 0], [1, 0, 1]],
-  6: [[1, 0, 1], [1, 0, 1], [1, 0, 1]],
+const DOT_POSITIONS: Record<number, Array<{ top: string; left: string }>> = {
+  1: [{ top: "50%", left: "50%" }],
+  2: [{ top: "25%", left: "25%" }, { top: "75%", left: "75%" }],
+  3: [{ top: "25%", left: "25%" }, { top: "50%", left: "50%" }, { top: "75%", left: "75%" }],
+  4: [{ top: "25%", left: "25%" }, { top: "25%", left: "75%" }, { top: "75%", left: "25%" }, { top: "75%", left: "75%" }],
+  5: [{ top: "25%", left: "25%" }, { top: "25%", left: "75%" }, { top: "50%", left: "50%" }, { top: "75%", left: "25%" }, { top: "75%", left: "75%" }],
+  6: [{ top: "22%", left: "25%" }, { top: "22%", left: "75%" }, { top: "50%", left: "25%" }, { top: "50%", left: "75%" }, { top: "78%", left: "25%" }, { top: "78%", left: "75%" }],
 };
 
 function DiceFace({ value }: { value: number }) {
-  const face = DICE_FACES[value] || DICE_FACES[1];
+  const dots = DOT_POSITIONS[value] ?? DOT_POSITIONS[1];
   return (
-    <div className="grid grid-cols-3 gap-1 w-12 h-12 p-2">
-      {face.flat().map((dot, i) => (
+    <div className="relative w-12 h-12">
+      {dots.map((pos, i) => (
         <div
           key={i}
-          className={`rounded-full transition-all duration-100 ${
-            dot ? "bg-white shadow-md" : "bg-transparent"
-          }`}
-          style={{ aspectRatio: "1" }}
+          className="absolute w-3 h-3 rounded-full"
+          style={{
+            top: pos.top,
+            left: pos.left,
+            transform: "translate(-50%,-50%)",
+            background: "radial-gradient(circle at 35% 35%, #ffffff, #e2e8f0)",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.8)",
+          }}
         />
       ))}
     </div>
@@ -37,14 +41,12 @@ function DiceFace({ value }: { value: number }) {
 
 export default function Dice({ value, rolling, onRoll, disabled, canRoll }: DiceProps) {
   const [displayValue, setDisplayValue] = useState(value ?? 1);
-  const [isAnimating, setIsAnimating] = useState(false);
+  const [isAnimating, setIsAnimating]   = useState(false);
 
   useEffect(() => {
     if (rolling) {
       setIsAnimating(true);
-      const interval = setInterval(() => {
-        setDisplayValue(Math.floor(Math.random() * 6) + 1);
-      }, 80);
+      const interval = setInterval(() => setDisplayValue(Math.floor(Math.random() * 6) + 1), 80);
       return () => clearInterval(interval);
     } else {
       setIsAnimating(false);
@@ -60,25 +62,33 @@ export default function Dice({ value, rolling, onRoll, disabled, canRoll }: Dice
       <motion.button
         onClick={onRoll}
         disabled={!canPress}
-        whileHover={canPress ? { scale: 1.05 } : {}}
-        whileTap={canPress ? { scale: 0.95 } : {}}
-        className={`relative w-20 h-20 rounded-2xl border-2 flex items-center justify-center cursor-pointer select-none transition-all duration-200 ${
-          canPress
-            ? "border-primary/60 bg-card hover:border-primary hover:bg-card/80 shadow-lg shadow-primary/20 pulse-glow"
-            : "border-muted/30 bg-muted/20 cursor-not-allowed opacity-50"
-        }`}
+        whileHover={canPress ? { scale: 1.08, y: -2 } : {}}
+        whileTap={canPress ? { scale: 0.93, y: 1 } : {}}
+        className="relative w-20 h-20 rounded-2xl flex items-center justify-center cursor-pointer select-none"
         style={{
           background: canPress
-            ? "linear-gradient(135deg, hsl(220 25% 20%), hsl(220 25% 15%))"
-            : undefined,
+            ? "linear-gradient(145deg, hsl(220 28% 26%), hsl(220 28% 18%))"
+            : "linear-gradient(145deg, hsl(220 15% 18%), hsl(220 15% 14%))",
+          border: canPress
+            ? "2px solid hsl(258 80% 60% / 0.7)"
+            : "2px solid hsl(220 15% 26% / 0.5)",
+          boxShadow: canPress
+            ? "0 6px 0 hsl(220 28% 12%), 0 8px 20px rgba(0,0,0,0.5), 0 0 20px hsl(258 80% 50% / 0.15), inset 0 1px 0 rgba(255,255,255,0.08)"
+            : "0 3px 0 hsl(220 15% 10%), 0 4px 10px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.03)",
+          cursor: canPress ? "pointer" : "not-allowed",
+          opacity: !canPress && disabled ? 0.4 : 1,
+          transition: "box-shadow 0.15s, border-color 0.15s",
         }}
       >
+        {/* Top-left corner dot (3D effect) */}
+        <div className="absolute top-2 left-2 w-1 h-1 rounded-full bg-white/10" />
+
         <AnimatePresence mode="wait">
           <motion.div
-            key={isAnimating ? `anim-${displayValue}` : `val-${displayValue}`}
-            initial={{ opacity: 0.7, rotateY: isAnimating ? -90 : 0 }}
-            animate={{ opacity: 1, rotateY: 0 }}
-            transition={{ duration: isAnimating ? 0.05 : 0.2 }}
+            key={isAnimating ? `a-${displayValue}` : `v-${displayValue}`}
+            initial={{ opacity: 0.6, rotateY: isAnimating ? -70 : 0, scale: 0.9 }}
+            animate={{ opacity: 1, rotateY: 0, scale: 1 }}
+            transition={{ duration: isAnimating ? 0.06 : 0.18 }}
           >
             <DiceFace value={displayValue} />
           </motion.div>
@@ -86,9 +96,10 @@ export default function Dice({ value, rolling, onRoll, disabled, canRoll }: Dice
 
         {isAnimating && (
           <motion.div
-            className="absolute inset-0 rounded-2xl border-2 border-primary/50"
-            animate={{ opacity: [0.5, 1, 0.5] }}
-            transition={{ duration: 0.3, repeat: Infinity }}
+            className="absolute inset-0 rounded-2xl"
+            style={{ border: "2px solid hsl(258 90% 70%)" }}
+            animate={{ opacity: [0.4, 1, 0.4], boxShadow: ["0 0 8px hsl(258 90% 50% / 0.3)", "0 0 20px hsl(258 90% 60% / 0.6)", "0 0 8px hsl(258 90% 50% / 0.3)"] }}
+            transition={{ duration: 0.25, repeat: Infinity }}
           />
         )}
       </motion.button>
@@ -98,13 +109,7 @@ export default function Dice({ value, rolling, onRoll, disabled, canRoll }: Dice
         animate={{ opacity: [0.7, 1, 0.7] }}
         transition={{ duration: 2, repeat: Infinity }}
       >
-        {rolling
-          ? "Rolling..."
-          : canRoll && !disabled
-          ? "Click to roll!"
-          : disabled
-          ? "Wait your turn"
-          : "Answer first!"}
+        {rolling ? "Rolling…" : canRoll && !disabled ? "Click to roll!" : disabled ? "Wait your turn" : "Answer first!"}
       </motion.p>
     </div>
   );
