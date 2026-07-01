@@ -1,0 +1,7 @@
+<svg width="192" height="192" viewBox="0 0 192 192" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="192" height="192" rx="38" fill="#1e293b"/>
+  <rect x="8" y="8" width="176" height="176" rx="30" fill="#0f172a"/>
+  <text x="96" y="128" font-size="100" text-anchor="middle" font-family="serif">🐍</text>
+  <rect x="16" y="150" width="160" height="26" rx="6" fill="#7c3aed" opacity="0.8"/>
+  <text x="96" y="169" font-size="14" font-weight="bold" text-anchor="middle" fill="white" font-family="sans-serif">ULAR TANGGA</text>
+</svg>
