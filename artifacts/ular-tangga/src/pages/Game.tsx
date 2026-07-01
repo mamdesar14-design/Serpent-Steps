@@ -8,6 +8,7 @@ import Dice from "@/components/Dice";
 import QuestionModal from "@/components/QuestionModal";
 import PlayerPanel from "@/components/PlayerPanel";
 import Confetti from "@/components/Confetti";
+import GameBackground from "@/components/GameBackground";
 import { sounds } from "@/lib/sounds";
 import { checkAndUnlock, Badge } from "@/lib/achievements";
 import { Copy, Play, Trophy, ArrowLeft, LogOut, Home as HomeIcon, RotateCcw, Volume2, VolumeX, Send, MessageSquare, Clock3 } from "lucide-react";
@@ -320,6 +321,7 @@ export default function Game() {
 
   return (
     <div className="min-h-screen flex flex-col">
+      <GameBackground />
       <div className="border-b border-border/30 bg-card/40 backdrop-blur-sm px-4 py-2.5 flex items-center justify-between shrink-0">
         <button
           onClick={() => setLocation("/")}
