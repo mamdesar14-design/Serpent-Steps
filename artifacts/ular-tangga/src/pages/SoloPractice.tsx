@@ -220,7 +220,7 @@ export default function SoloPractice() {
       setAnimatingPlayerId(null);
       setAnimationPath([]);
       setBoardEventState(null);
-    }, path.length * 175 + eventTime + 400);
+    }, path.length * 280 + eventTime + 400);
 
     setScore(s => s + bonusScore);
     setPosition(newPos);

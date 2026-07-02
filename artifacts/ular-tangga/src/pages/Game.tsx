@@ -221,7 +221,7 @@ export default function Game() {
           setAnimatingPlayerId(null);
           setAnimationPath([]);
           setBoardEvent(null);
-        }, path.length * 175 + eventTime + 400);
+        }, path.length * 280 + eventTime + 400);
       }
     }
     function onGameOver({ game }: { game: GameState }) {

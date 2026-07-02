@@ -29,7 +29,7 @@ type BoardProps = {
 
 const CELL_SIZE = 52;
 const BOARD_SIZE = CELL_SIZE * 10;
-const STEP_MS = 175;
+const STEP_MS = 280;
 
 type LadderRecord = Record<number, { to: number; reward: { type: string } }>;
 
@@ -231,7 +231,7 @@ function LadderSVG({ from, to, color }: { from: number; to: number; color: strin
       <line x1={rS.x} y1={rS.y} x2={rE.x} y2={rE.y} stroke="rgba(255,255,255,0.25)" strokeWidth={1.5} strokeLinecap="round" />
       {/* Rungs */}
       {rungs.map((r, i) => (
-        <g key={i}>
+        <g key={`rung-${from}-${i}`}>
           <line x1={r.x1} y1={r.y1} x2={r.x2} y2={r.y2} stroke="rgba(0,0,0,0.3)" strokeWidth={4.5}
             strokeLinecap="round" transform="translate(1,1)" />
           <line x1={r.x1} y1={r.y1} x2={r.x2} y2={r.y2} stroke={color} strokeWidth={4} strokeLinecap="round" />
@@ -402,20 +402,48 @@ export default function Board({ players, level, animatingPlayerId, animationPath
             const c    = getCellCoords(pos, CELL_SIZE);
             const cx = c.x + offset; const cy = c.y;
             return (
+              // Outer group stays mounted for the whole walking phase
               <motion.g key={player.id}>
-                <motion.circle key={`${player.id}-pulse-${step}`} cx={cx} cy={cy} r={17}
-                  fill="none" stroke="white" strokeWidth={1.5}
-                  initial={{ opacity: 0.7, scale: 1 }} animate={{ opacity: 0, scale: 1.7 }}
-                  transition={{ duration: 0.25 }} />
-                <motion.circle r={13} fill={player.color} stroke="white" strokeWidth={2.5}
-                  filter="drop-shadow(0 3px 6px rgba(0,0,0,0.6))"
-                  animate={{ cx, cy }} transition={{ type: "spring", damping: 18, stiffness: 500 }} />
-                <motion.text textAnchor="middle" fontSize={10} fill="white" fontWeight="bold"
-                  style={{ pointerEvents: "none", userSelect: "none" }}
-                  animate={{ x: cx, y: cy + 4 }}
-                  transition={{ type: "spring", damping: 18, stiffness: 500 }}>
-                  {player.name[0].toUpperCase()}
-                </motion.text>
+                {/*
+                  Inner group keyed by step — remounts on every step change.
+                  This causes motion.circle/text inside to replay initial→animate,
+                  creating a visible "hop" from above on each square.
+                */}
+                <motion.g key={`${player.id}-step-${step}`}
+                  initial={{ opacity: 1 }} animate={{ opacity: 1 }}>
+                  {/* Ripple ring that expands outward on landing */}
+                  <motion.circle cx={cx} cy={cy} r={14}
+                    fill="none" stroke="white" strokeWidth={2}
+                    initial={{ opacity: 0.85, scale: 0.4 }}
+                    animate={{ opacity: 0, scale: 2.4 }}
+                    transition={{ duration: 0.2, ease: "easeOut" }}
+                  />
+                  {/* Token falls from above — spring gives natural bounce on landing */}
+                  <motion.circle r={13} cx={cx}
+                    fill={player.color} stroke="white" strokeWidth={2.5}
+                    filter="drop-shadow(0 4px 10px rgba(0,0,0,0.75))"
+                    initial={{ cy: cy - 26 }}
+                    animate={{ cy }}
+                    transition={{ type: "spring", damping: 8, stiffness: 320, mass: 0.55 }}
+                  />
+                  {/* Label falls with token */}
+                  <motion.text textAnchor="middle" fontSize={10} fill="white" fontWeight="bold"
+                    style={{ pointerEvents: "none", userSelect: "none" }}
+                    initial={{ x: cx, y: cy - 22 }}
+                    animate={{ x: cx, y: cy + 4 }}
+                    transition={{ type: "spring", damping: 8, stiffness: 320, mass: 0.55 }}
+                  >
+                    {player.name[0].toUpperCase()}
+                  </motion.text>
+                  {/* Step counter badge e.g. "2/6" */}
+                  <rect x={cx + 7} y={cy - 28} rx={3} ry={3}
+                    width={20} height={12} fill="rgba(0,0,0,0.82)" />
+                  <text x={cx + 17} y={cy - 19}
+                    textAnchor="middle" fontSize={7.5} fill="#fbbf24" fontWeight="bold"
+                    style={{ pointerEvents: "none", userSelect: "none" }}>
+                    {step + 1}/{animationPath.length}
+                  </text>
+                </motion.g>
               </motion.g>
             );
           }
