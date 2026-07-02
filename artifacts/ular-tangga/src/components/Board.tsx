@@ -134,18 +134,30 @@ function SnakeHead({ hx, hy, tx, ty, headColor }: { hx: number; hy: number; tx: 
   );
 }
 
+/* ─── Snake color palette (varied, like classic boards) ─── */
+const SNAKE_PALETTE = [
+  { outer: "#7f1d1d", inner: "#ef4444", head: "#dc2626", scale: "rgba(255,160,160,0.35)" }, // red
+  { outer: "#14532d", inner: "#22c55e", head: "#16a34a", scale: "rgba(160,255,190,0.35)" }, // green
+  { outer: "#1e3a8a", inner: "#3b82f6", head: "#2563eb", scale: "rgba(160,200,255,0.35)" }, // blue
+  { outer: "#7c2d12", inner: "#f97316", head: "#ea580c", scale: "rgba(255,200,150,0.35)" }, // orange
+  { outer: "#4c1d95", inner: "#a855f7", head: "#9333ea", scale: "rgba(210,170,255,0.35)" }, // purple
+  { outer: "#134e4a", inner: "#14b8a6", head: "#0d9488", scale: "rgba(150,240,225,0.35)" }, // teal
+  { outer: "#831843", inner: "#ec4899", head: "#db2777", scale: "rgba(255,170,210,0.35)" }, // pink
+  { outer: "#713f12", inner: "#eab308", head: "#ca8a04", scale: "rgba(255,230,150,0.4)" },  // yellow
+];
+
 /* ─── Snake SVG ─── */
-function SnakeSVG({ from, to, idx, level }: { from: number; to: number; idx: number; level: number }) {
+function SnakeSVG({ from, to, idx }: { from: number; to: number; idx: number }) {
   const s = getCellCoords(from, CELL_SIZE);
   const e = getCellCoords(to, CELL_SIZE);
   const dir: 1 | -1 = idx % 2 === 0 ? 1 : -1;
   const path = buildSnakePath(s, e, dir);
 
-  const isLevel3 = level === 3;
-  const outerColor  = isLevel3 ? "#4c1d95" : "#7f1d1d";
-  const innerColor  = isLevel3 ? "#9333ea" : "#ef4444";
-  const headColor   = isLevel3 ? "#7c3aed" : "#dc2626";
-  const scaleColor  = isLevel3 ? "rgba(200,160,255,0.35)" : "rgba(255,160,160,0.35)";
+  const c = SNAKE_PALETTE[idx % SNAKE_PALETTE.length];
+  const outerColor  = c.outer;
+  const innerColor  = c.inner;
+  const headColor   = c.head;
+  const scaleColor  = c.scale;
 
   return (
     <g>
@@ -207,12 +219,17 @@ function LadderSVG({ from, to, color }: { from: number; to: number; color: strin
   );
 }
 
-function getLadderColor(level: number, ladder: { to: number; reward: { type: string } } | number): string {
-  if (typeof ladder === "number") return "#22c55e";
-  if (ladder.reward.type === "snake")      return "#f97316";
-  if (ladder.reward.type === "bonus_roll") return "#3b82f6";
-  return "#22c55e";
-}
+/* ─── Ladder color palette (varied, like classic boards) ─── */
+const LADDER_PALETTE = [
+  "#f97316", // orange
+  "#22c55e", // green
+  "#3b82f6", // blue
+  "#eab308", // yellow
+  "#ef4444", // red
+  "#a855f7", // purple
+  "#06b6d4", // cyan
+  "#f43f5e", // rose
+];
 
 function getBezierPoints(
   p0: { x: number; y: number },
@@ -329,19 +346,20 @@ export default function Board({ players, level, snakes, ladders, animatingPlayer
       {/* ─── Snake & Ladder SVG layer ─── */}
       <svg className="absolute inset-0 pointer-events-none z-10" width={BOARD_SIZE} height={BOARD_SIZE}>
         {/* Ladders first (behind snakes) */}
-        {level === 1 && ladderEntries.map(([from, to]) => (
-          <LadderSVG key={`l-${from}`} from={parseInt(from)} to={to as number} color="#22c55e" />
+        {level === 1 && ladderEntries.map(([from, to], idx) => (
+          <LadderSVG key={`l-${from}`} from={parseInt(from)} to={to as number}
+            color={LADDER_PALETTE[idx % LADDER_PALETTE.length]} />
         ))}
-        {(level === 2 || level === 3) && ladderEntries.map(([from, ladder]) => {
+        {(level === 2 || level === 3) && ladderEntries.map(([from, ladder], idx) => {
           const l = ladder as { to: number; reward: { type: string } };
           return (
             <LadderSVG key={`l-${from}`} from={parseInt(from)} to={l.to}
-              color={getLadderColor(level, l)} />
+              color={LADDER_PALETTE[idx % LADDER_PALETTE.length]} />
           );
         })}
         {/* Snakes on top */}
         {snakeEntries.map(([from, to], idx) => (
-          <SnakeSVG key={`s-${from}`} from={parseInt(from)} to={to as number} idx={idx} level={level} />
+          <SnakeSVG key={`s-${from}`} from={parseInt(from)} to={to as number} idx={idx} />
         ))}
       </svg>
 

@@ -61,21 +61,26 @@ export function generateRandomBoard(level: number): GeneratedBoard {
   const rowUse: Record<number, number> = {};
 
   const cfg =
-    level === 3 ? { numSnakes: 12, numLadders: 8, minLen: 12, maxLen: 35 } :
-    level === 2 ? { numSnakes: 10, numLadders: 8, minLen: 12, maxLen: 38 } :
-                  { numSnakes: 8,  numLadders: 7, minLen: 14, maxLen: 40 };
+    level === 3 ? { numSnakes: 12, numLadders: 8 } :
+    level === 2 ? { numSnakes: 10, numLadders: 8 } :
+                  { numSnakes: 8,  numLadders: 7 };
 
-  // Snakes: distributed heads, mostly-vertical bodies, moderate length
+  // Varied lengths like classic boards: mix of short and long
+  const pickLen = (): { min: number; max: number } =>
+    Math.random() < 0.45 ? { min: 8, max: 16 } : { min: 18, max: 42 };
+
+  // Snakes: distributed heads, mostly-vertical bodies, varied length
   let placed = 0;
   let tries  = 0;
   while (placed < cfg.numSnakes && tries < 5000) {
     tries++;
+    const len = pickLen();
     const head = randInt(25, 99);
     if (forbidden.has(head)) continue;
     const hRow = rowOf(head);
     if ((rowUse[hRow] ?? 0) >= 2) continue;
-    const minTail = Math.max(2, head - cfg.maxLen);
-    const maxTail = head - cfg.minLen;
+    const minTail = Math.max(2, head - len.max);
+    const maxTail = head - len.min;
     if (maxTail < minTail) continue;
     const tail = randInt(minTail, maxTail);
     if (forbidden.has(tail)) continue;
@@ -87,7 +92,7 @@ export function generateRandomBoard(level: number): GeneratedBoard {
     placed++;
   }
 
-  // Ladders: same tidy constraints
+  // Ladders: same tidy constraints, varied lengths
   placed = 0;
   tries  = 0;
   const lRowUse: Record<number, number> = {};
@@ -95,12 +100,13 @@ export function generateRandomBoard(level: number): GeneratedBoard {
   let rewardIdx = 0;
   while (placed < cfg.numLadders && tries < 5000) {
     tries++;
-    const bottom = randInt(2, 75);
+    const len = pickLen();
+    const bottom = randInt(2, 88);
     if (forbidden.has(bottom)) continue;
     const bRow = rowOf(bottom);
     if ((lRowUse[bRow] ?? 0) >= 2) continue;
-    const minTop = bottom + cfg.minLen;
-    const maxTop = Math.min(98, bottom + cfg.maxLen);
+    const minTop = bottom + len.min;
+    const maxTop = Math.min(98, bottom + len.max);
     if (minTop > maxTop) continue;
     const top = randInt(minTop, maxTop);
     if (forbidden.has(top)) continue;

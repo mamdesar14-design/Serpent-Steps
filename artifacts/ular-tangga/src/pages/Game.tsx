@@ -40,7 +40,7 @@ type GameState = {
   pendingDiceValue: number | null;
   lastEvent: string | null;
   boardSnakes?: Record<number, number>;
-  boardLadders?: Record<number, number | { to: number; reward: { type: string; value: number; description: string } }>;
+  boardLadders?: Record<number, number | { to: number; reward: { type: "points" | "snake" | "bonus_roll"; value: number; description: string } }>;
 };
 
 export default function Game() {
