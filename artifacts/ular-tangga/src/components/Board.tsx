@@ -280,7 +280,7 @@ export default function Board({ players, level, snakes, ladders, animatingPlayer
   const cells = useMemo(() => {
     const result: number[] = [];
     for (let row = 9; row >= 0; row--) {
-      const isEvenRow = (9 - row) % 2 === 0;
+      const isEvenRow = row % 2 === 0;          // row 0 = even → 1..10 left→right
       for (let col = 0; col < 10; col++) {
         const actualCol = isEvenRow ? col : 9 - col;
         result.push(row * 10 + actualCol + 1);
@@ -321,10 +321,10 @@ export default function Board({ players, level, snakes, ladders, animatingPlayer
               <span
                 className="absolute font-mono font-bold leading-none pointer-events-none select-none"
                 style={{
-                  fontSize: pos === 100 ? "7.5px" : "8px",
+                  fontSize: pos === 100 ? "9px" : "10px",
                   top: "2px", left: "3px",
                   color: pos === 100 ? "#fbbf24" : pos === 1 ? "#93c5fd" :
-                    "rgba(148,163,184,0.55)",
+                    "rgba(148,163,184,0.65)",
                 }}
               >
                 {pos}
@@ -345,7 +345,11 @@ export default function Board({ players, level, snakes, ladders, animatingPlayer
 
       {/* ─── Snake & Ladder SVG layer ─── */}
       <svg className="absolute inset-0 pointer-events-none z-10" width={BOARD_SIZE} height={BOARD_SIZE}>
-        {/* Ladders first (behind snakes) */}
+        {/* Snakes first (behind ladders) */}
+        {snakeEntries.map(([from, to], idx) => (
+          <SnakeSVG key={`s-${from}`} from={parseInt(from)} to={to as number} idx={idx} />
+        ))}
+        {/* Ladders on top */}
         {level === 1 && ladderEntries.map(([from, to], idx) => (
           <LadderSVG key={`l-${from}`} from={parseInt(from)} to={to as number}
             color={LADDER_PALETTE[idx % LADDER_PALETTE.length]} />
@@ -357,10 +361,6 @@ export default function Board({ players, level, snakes, ladders, animatingPlayer
               color={LADDER_PALETTE[idx % LADDER_PALETTE.length]} />
           );
         })}
-        {/* Snakes on top */}
-        {snakeEntries.map(([from, to], idx) => (
-          <SnakeSVG key={`s-${from}`} from={parseInt(from)} to={to as number} idx={idx} />
-        ))}
       </svg>
 
       {/* ─── Token SVG layer ─── */}

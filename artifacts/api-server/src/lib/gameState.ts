@@ -173,7 +173,7 @@ function generateBoard(level: number): {
 } {
   const boardSnakes: Record<number, number> = {};
   const boardLadders: Record<number, number | { to: number; reward: LadderReward }> = {};
-  const forbidden = new Set<number>([1, 100]);
+  const forbidden = new Set<number>([1, 99, 100]);
   const rowUse: Record<number, number> = {};
 
   const cfg =

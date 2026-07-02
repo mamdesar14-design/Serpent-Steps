@@ -57,7 +57,7 @@ function rowOf(pos: number): number {
 export function generateRandomBoard(level: number): GeneratedBoard {
   const snakes: GeneratedSnakes = {};
   const ladders: GeneratedLadders = {};
-  const forbidden = new Set<number>([1, 100]);
+  const forbidden = new Set<number>([1, 99, 100]);
   const rowUse: Record<number, number> = {};
 
   const cfg =
