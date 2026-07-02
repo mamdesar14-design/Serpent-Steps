@@ -156,6 +156,17 @@ function ri(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+function colOf(pos: number): number {
+  const idx = pos - 1;
+  const row = Math.floor(idx / 10);
+  const col = idx % 10;
+  return row % 2 === 0 ? col : 9 - col;
+}
+
+function rowOf(pos: number): number {
+  return Math.floor((pos - 1) / 10);
+}
+
 function generateBoard(level: number): {
   boardSnakes: Record<number, number>;
   boardLadders: Record<number, number | { to: number; reward: LadderReward }>;
@@ -163,39 +174,49 @@ function generateBoard(level: number): {
   const boardSnakes: Record<number, number> = {};
   const boardLadders: Record<number, number | { to: number; reward: LadderReward }> = {};
   const forbidden = new Set<number>([1, 100]);
+  const rowUse: Record<number, number> = {};
 
   const cfg =
-    level === 3 ? { numSnakes: 15, numLadders: 10, minDrop: 5, minClimb: 7 } :
-    level === 2 ? { numSnakes: 12, numLadders: 9,  minDrop: 6, minClimb: 8 } :
-                  { numSnakes: 10, numLadders: 8,  minDrop: 8, minClimb: 10 };
+    level === 3 ? { numSnakes: 12, numLadders: 8, minLen: 12, maxLen: 35 } :
+    level === 2 ? { numSnakes: 10, numLadders: 8, minLen: 12, maxLen: 38 } :
+                  { numSnakes: 8,  numLadders: 7, minLen: 14, maxLen: 40 };
 
   let placed = 0, tries = 0;
-  while (placed < cfg.numSnakes && tries < 3000) {
+  while (placed < cfg.numSnakes && tries < 5000) {
     tries++;
-    const head = ri(15, 99);
+    const head = ri(25, 99);
     if (forbidden.has(head)) continue;
-    const maxTail = head - cfg.minDrop;
-    if (maxTail < 2) continue;
-    const tail = ri(2, maxTail);
+    const hRow = rowOf(head);
+    if ((rowUse[hRow] ?? 0) >= 2) continue;
+    const minTail = Math.max(2, head - cfg.maxLen);
+    const maxTail = head - cfg.minLen;
+    if (maxTail < minTail) continue;
+    const tail = ri(minTail, maxTail);
     if (forbidden.has(tail)) continue;
+    if (Math.abs(colOf(head) - colOf(tail)) > 3) continue;
     boardSnakes[head] = tail;
     forbidden.add(head);
     forbidden.add(tail);
+    rowUse[hRow] = (rowUse[hRow] ?? 0) + 1;
     placed++;
   }
 
   placed = 0; tries = 0;
+  const lRowUse: Record<number, number> = {};
   const pool = level === 3 ? REWARDS_L3 : REWARDS_L2;
   let rewardIdx = 0;
-  while (placed < cfg.numLadders && tries < 3000) {
+  while (placed < cfg.numLadders && tries < 5000) {
     tries++;
-    const bottom = ri(2, 88);
+    const bottom = ri(2, 75);
     if (forbidden.has(bottom)) continue;
-    const maxTop = Math.min(98, bottom + 60);
-    const minTop = bottom + cfg.minClimb;
+    const bRow = rowOf(bottom);
+    if ((lRowUse[bRow] ?? 0) >= 2) continue;
+    const minTop = bottom + cfg.minLen;
+    const maxTop = Math.min(98, bottom + cfg.maxLen);
     if (minTop > maxTop) continue;
     const top = ri(minTop, maxTop);
     if (forbidden.has(top)) continue;
+    if (Math.abs(colOf(bottom) - colOf(top)) > 3) continue;
     if (level === 1) {
       boardLadders[bottom] = top;
     } else {
@@ -205,6 +226,7 @@ function generateBoard(level: number): {
     }
     forbidden.add(bottom);
     forbidden.add(top);
+    lRowUse[bRow] = (lRowUse[bRow] ?? 0) + 1;
     placed++;
   }
 
