@@ -32,6 +32,8 @@ export type GameState = {
   pendingDiceValue: number | null;
   lastEvent: string | null;
   createdAt: number;
+  boardSnakes: Record<number, number>;
+  boardLadders: Record<number, number | { to: number; reward: LadderReward }>;
 };
 
 const PLAYER_COLORS = ["#EF4444", "#3B82F6", "#10B981", "#F59E0B", "#8B5CF6"];
@@ -124,6 +126,91 @@ function generateRoomCode(): string {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
 }
 
+const REWARDS_L2: LadderReward[] = [
+  { type: "points",     value: 10, description: "+10 bonus points!" },
+  { type: "bonus_roll", value: 1,  description: "Bonus roll!" },
+  { type: "points",     value: 20, description: "+20 bonus points!" },
+  { type: "snake",      value: -2, description: "Surprise snake! Slide back!" },
+  { type: "points",     value: 15, description: "+15 bonus points!" },
+  { type: "bonus_roll", value: 1,  description: "Extra roll!" },
+  { type: "points",     value: 25, description: "+25 bonus points!" },
+  { type: "snake",      value: -3, description: "Hidden trap! Slide back!" },
+  { type: "bonus_roll", value: 2,  description: "2 bonus rolls!" },
+  { type: "points",     value: 30, description: "+30 bonus points!" },
+];
+
+const REWARDS_L3: LadderReward[] = [
+  { type: "points",     value: 5,  description: "+5 points — small mercy!" },
+  { type: "snake",      value: -5, description: "Trap ladder! Fall back!" },
+  { type: "bonus_roll", value: 1,  description: "Bonus roll earned!" },
+  { type: "snake",      value: -8, description: "Trapdoor! Drop down!" },
+  { type: "points",     value: 15, description: "+15 points!" },
+  { type: "snake",      value: -4, description: "Fake ladder! Watch out!" },
+  { type: "bonus_roll", value: 1,  description: "Lucky roll!" },
+  { type: "snake",      value: -6, description: "Hidden snake! Slide back!" },
+  { type: "points",     value: 10, description: "+10 points!" },
+  { type: "snake",      value: -3, description: "Trap! Fall back!" },
+];
+
+function ri(min: number, max: number): number {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function generateBoard(level: number): {
+  boardSnakes: Record<number, number>;
+  boardLadders: Record<number, number | { to: number; reward: LadderReward }>;
+} {
+  const boardSnakes: Record<number, number> = {};
+  const boardLadders: Record<number, number | { to: number; reward: LadderReward }> = {};
+  const forbidden = new Set<number>([1, 100]);
+
+  const cfg =
+    level === 3 ? { numSnakes: 15, numLadders: 10, minDrop: 5, minClimb: 7 } :
+    level === 2 ? { numSnakes: 12, numLadders: 9,  minDrop: 6, minClimb: 8 } :
+                  { numSnakes: 10, numLadders: 8,  minDrop: 8, minClimb: 10 };
+
+  let placed = 0, tries = 0;
+  while (placed < cfg.numSnakes && tries < 3000) {
+    tries++;
+    const head = ri(15, 99);
+    if (forbidden.has(head)) continue;
+    const maxTail = head - cfg.minDrop;
+    if (maxTail < 2) continue;
+    const tail = ri(2, maxTail);
+    if (forbidden.has(tail)) continue;
+    boardSnakes[head] = tail;
+    forbidden.add(head);
+    forbidden.add(tail);
+    placed++;
+  }
+
+  placed = 0; tries = 0;
+  const pool = level === 3 ? REWARDS_L3 : REWARDS_L2;
+  let rewardIdx = 0;
+  while (placed < cfg.numLadders && tries < 3000) {
+    tries++;
+    const bottom = ri(2, 88);
+    if (forbidden.has(bottom)) continue;
+    const maxTop = Math.min(98, bottom + 60);
+    const minTop = bottom + cfg.minClimb;
+    if (minTop > maxTop) continue;
+    const top = ri(minTop, maxTop);
+    if (forbidden.has(top)) continue;
+    if (level === 1) {
+      boardLadders[bottom] = top;
+    } else {
+      const reward = pool[rewardIdx % pool.length];
+      rewardIdx++;
+      boardLadders[bottom] = { to: top, reward };
+    }
+    forbidden.add(bottom);
+    forbidden.add(top);
+    placed++;
+  }
+
+  return { boardSnakes, boardLadders };
+}
+
 export function createGame(hostName: string, level: number, color?: string): GameState {
   const roomCode = generateRoomCode();
   const hostId = randomUUID();
@@ -139,6 +226,7 @@ export function createGame(hostName: string, level: number, color?: string): Gam
     streak: 0,
   };
 
+  const { boardSnakes, boardLadders } = generateBoard(level);
   const game: GameState = {
     roomCode,
     level,
@@ -152,6 +240,8 @@ export function createGame(hostName: string, level: number, color?: string): Gam
     pendingDiceValue: null,
     lastEvent: null,
     createdAt: Date.now(),
+    boardSnakes,
+    boardLadders,
   };
 
   games.set(roomCode, game);
@@ -210,6 +300,9 @@ export function rematchGame(roomCode: string): GameState | null {
     player.bonusRolls = 0;
     player.streak = 0;
   }
+  const { boardSnakes, boardLadders } = generateBoard(game.level);
+  game.boardSnakes = boardSnakes;
+  game.boardLadders = boardLadders;
   return game;
 }
 
@@ -266,57 +359,32 @@ export function movePlayer(
   let event: string | null = null;
   let reward: LadderReward | null = null;
 
-  if (game.level === 1) {
-    if (SNAKES_LEVEL1[newPos]) {
-      const from = newPos;
-      newPos = SNAKES_LEVEL1[newPos];
-      event = `🐍 Snake! ${player.name} slid from ${from} to ${newPos}!`;
-    } else if (LADDERS_LEVEL1[newPos]) {
-      const from = newPos;
-      newPos = LADDERS_LEVEL1[newPos];
+  const bSnakes = game.boardSnakes;
+  const bLadders = game.boardLadders;
+
+  if (bSnakes[newPos] !== undefined) {
+    const from = newPos;
+    newPos = bSnakes[newPos];
+    const emoji = game.level === 3 ? "☠️" : "🐍";
+    event = `${emoji} Snake! ${player.name} slid from ${from} to ${newPos}!`;
+  } else if (bLadders[newPos] !== undefined) {
+    const ladderVal = bLadders[newPos];
+    const from = newPos;
+    if (typeof ladderVal === "number") {
+      newPos = ladderVal;
       event = `🪜 Ladder! ${player.name} climbed from ${from} to ${newPos}!`;
-    }
-  } else if (game.level === 2) {
-    if (SNAKES_LEVEL2[newPos]) {
-      const from = newPos;
-      newPos = SNAKES_LEVEL2[newPos];
-      event = `🐍 Snake! ${player.name} slid from ${from} to ${newPos}!`;
-    } else if (LADDERS_LEVEL2[newPos]) {
-      const ladder = LADDERS_LEVEL2[newPos];
-      const from = newPos;
-      newPos = ladder.to;
-      reward = ladder.reward;
+    } else {
+      newPos = ladderVal.to;
+      reward = ladderVal.reward;
       event = `🪜 Ladder! ${player.name} climbed from ${from} to ${newPos}! ${reward.description}`;
-
       if (reward.type === "points") {
         player.score += reward.value;
       } else if (reward.type === "bonus_roll") {
         player.bonusRolls += reward.value;
       } else if (reward.type === "snake") {
         newPos = Math.max(1, newPos + reward.value);
-        event = `🎭 Surprise! ${ladder.reward.description}`;
-      }
-    }
-  } else {
-    // Level 3
-    if (SNAKES_LEVEL3[newPos]) {
-      const from = newPos;
-      newPos = SNAKES_LEVEL3[newPos];
-      event = `☠️ Deadly Snake! ${player.name} crashed from ${from} to ${newPos}!`;
-    } else if (LADDERS_LEVEL3[newPos]) {
-      const ladder = LADDERS_LEVEL3[newPos];
-      const from = newPos;
-      newPos = ladder.to;
-      reward = ladder.reward;
-      event = `🪜 Ladder! ${player.name} climbed from ${from} to ${newPos}! ${reward.description}`;
-
-      if (reward.type === "points") {
-        player.score += reward.value;
-      } else if (reward.type === "bonus_roll") {
-        player.bonusRolls += reward.value;
-      } else if (reward.type === "snake") {
-        newPos = Math.max(1, newPos + reward.value);
-        event = `💀 Trapdoor! ${ladder.reward.description}`;
+        const trapEmoji = game.level === 3 ? "💀" : "🎭";
+        event = `${trapEmoji} Surprise! ${ladderVal.reward.description}`;
       }
     }
   }

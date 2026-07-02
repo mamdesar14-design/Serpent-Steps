@@ -1,6 +1,6 @@
 import { useMemo, useRef, useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { SNAKES_LEVEL1, LADDERS_LEVEL1, SNAKES_LEVEL2, LADDERS_LEVEL2, SNAKES_LEVEL3, LADDERS_LEVEL3 } from "@/lib/gameData";
+import type { GeneratedSnakes, GeneratedLadders } from "@/lib/boardGenerator";
 import { sounds } from "@/lib/sounds";
 
 export type TokenBoardEvent = {
@@ -21,6 +21,8 @@ type Player = {
 type BoardProps = {
   players: Player[];
   level: number;
+  snakes: GeneratedSnakes;
+  ladders: GeneratedLadders;
   animatingPlayerId: string | null;
   animationPath: number[];
   boardEvent?: TokenBoardEvent;
@@ -31,18 +33,6 @@ const CELL_SIZE = 52;
 const BOARD_SIZE = CELL_SIZE * 10;
 const STEP_MS = 280;
 
-type LadderRecord = Record<number, { to: number; reward: { type: string } }>;
-
-function getSnakes(level: number): Record<number, number> {
-  if (level === 3) return SNAKES_LEVEL3;
-  if (level === 2) return SNAKES_LEVEL2;
-  return SNAKES_LEVEL1;
-}
-function getLadders(level: number): Record<number, number> | LadderRecord {
-  if (level === 3) return LADDERS_LEVEL3 as LadderRecord;
-  if (level === 2) return LADDERS_LEVEL2 as LadderRecord;
-  return LADDERS_LEVEL1;
-}
 
 function getCellCoords(pos: number, cellSize: number): { x: number; y: number } {
   if (pos === 0) return { x: -1, y: -1 };
@@ -59,49 +49,18 @@ function getCellCoords(pos: number, cellSize: number): { x: number; y: number } 
 
 function f(n: number): string { return n.toFixed(1); }
 
-function getCellBg(pos: number, level: number, isEven: boolean): React.CSSProperties {
-  const snakes = getSnakes(level);
-  const ladders = getLadders(level);
-
+function getCellBg(pos: number, _level: number, isEven: boolean): React.CSSProperties {
   if (pos === 100) return { background: "linear-gradient(145deg,#3d2208,#78350f)", borderColor: "#d97706" };
   if (pos === 1)   return { background: "linear-gradient(145deg,#0c1a42,#1e3a8a)", borderColor: "#3b82f6" };
-
-  if (snakes[pos] !== undefined) {
-    return level === 3
-      ? { background: "linear-gradient(145deg,#1e0a2e,#3b0764)", borderColor: "#7c3aed" }
-      : { background: "linear-gradient(145deg,#3d0808,#7f1d1d)", borderColor: "#b91c1c" };
-  }
-
-  if (level === 1) {
-    if ((ladders as Record<number, number>)[pos] !== undefined)
-      return { background: "linear-gradient(145deg,#052e16,#14532d)", borderColor: "#16a34a" };
-  } else {
-    const l = (ladders as LadderRecord)[pos];
-    if (l) {
-      if (l.reward.type === "snake")      return { background: "linear-gradient(145deg,#3d1a08,#7c2d12)", borderColor: "#ea580c" };
-      if (l.reward.type === "bonus_roll") return { background: "linear-gradient(145deg,#0c1840,#1e3a8a)", borderColor: "#3b82f6" };
-      return { background: "linear-gradient(145deg,#052e16,#14532d)", borderColor: "#16a34a" };
-    }
-  }
 
   return isEven
     ? { background: "linear-gradient(145deg,#1a2c42,#152236)", borderColor: "#263a54" }
     : { background: "linear-gradient(145deg,#111c2e,#0d1726)", borderColor: "#1a2840" };
 }
 
-function getCellLabel(pos: number, level: number): string {
-  const snakes = getSnakes(level);
-  const ladders = getLadders(level);
+function getCellLabel(pos: number): string {
   if (pos === 100) return "🏆";
   if (pos === 1)   return "▶";
-  if (snakes[pos] !== undefined) return level === 3 ? "☠️" : "🐍";
-  if (level === 1 && (ladders as Record<number, number>)[pos]) return "🪜";
-  if ((level === 2 || level === 3) && (ladders as LadderRecord)[pos]) {
-    const l = (ladders as LadderRecord)[pos];
-    if (l.reward.type === "snake")      return level === 3 ? "💀" : "🎭";
-    if (l.reward.type === "bonus_roll") return "🎲";
-    return "🪜";
-  }
   return "";
 }
 
@@ -270,7 +229,7 @@ function getBezierPoints(
   });
 }
 
-export default function Board({ players, level, animatingPlayerId, animationPath, boardEvent = null, animationKey = 0 }: BoardProps) {
+export default function Board({ players, level, snakes, ladders, animatingPlayerId, animationPath, boardEvent = null, animationKey = 0 }: BoardProps) {
   const [animStep, setAnimStep]   = useState(0);
   const [animPhase, setAnimPhase] = useState<"idle" | "walking" | "snake" | "ladder">("idle");
   const boardEventRef = useRef(boardEvent);
@@ -313,8 +272,6 @@ export default function Board({ players, level, animatingPlayerId, animationPath
     return result;
   }, []);
 
-  const snakes  = getSnakes(level);
-  const ladders = getLadders(level);
   const snakeEntries  = Object.entries(snakes);
   const ladderEntries = Object.entries(ladders);
 
@@ -333,7 +290,7 @@ export default function Board({ players, level, animatingPlayerId, animationPath
           const col    = idx % 10;
           const isEven = (row + col) % 2 === 0;
           const style  = getCellBg(pos, level, isEven);
-          const label  = getCellLabel(pos, level);
+          const label  = getCellLabel(pos);
           return (
             <div
               key={pos}
@@ -350,7 +307,6 @@ export default function Board({ players, level, animatingPlayerId, animationPath
                   fontSize: pos === 100 ? "7.5px" : "8px",
                   top: "2px", left: "3px",
                   color: pos === 100 ? "#fbbf24" : pos === 1 ? "#93c5fd" :
-                    snakes[pos] !== undefined ? (level === 3 ? "#c084fc" : "#fca5a5") :
                     "rgba(148,163,184,0.55)",
                 }}
               >

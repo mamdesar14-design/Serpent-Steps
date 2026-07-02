@@ -6,10 +6,8 @@ import {
   getRandomLevel3Text,
   ExplanationText,
   Level3ExplanationText,
-  SNAKES_LEVEL1, LADDERS_LEVEL1,
-  SNAKES_LEVEL2, LADDERS_LEVEL2,
-  SNAKES_LEVEL3, LADDERS_LEVEL3,
 } from "@/lib/gameData";
+import { generateRandomBoard, type GeneratedBoard } from "@/lib/boardGenerator";
 import Board from "@/components/Board";
 import Dice from "@/components/Dice";
 import QuestionModal from "@/components/QuestionModal";
@@ -38,16 +36,6 @@ const MILESTONE_LABELS: Record<number, string> = {
 };
 const EMOJI_REACTIONS = ["🔥", "💪", "😱", "🎉", "👏", "😅"];
 
-function getSnakes(level: number): Record<number, number> {
-  if (level === 3) return SNAKES_LEVEL3;
-  if (level === 2) return SNAKES_LEVEL2;
-  return SNAKES_LEVEL1;
-}
-function getLadders(level: number): Record<number, number | { to: number; reward: RewardInfo }> {
-  if (level === 3) return LADDERS_LEVEL3;
-  if (level === 2) return LADDERS_LEVEL2;
-  return LADDERS_LEVEL1;
-}
 function resolveLadder(val: number | { to: number; reward: RewardInfo }): { to: number; reward?: RewardInfo } {
   if (typeof val === "number") return { to: val };
   return { to: val.to, reward: val.reward };
@@ -93,6 +81,7 @@ export default function SoloPractice() {
   const [floatingEmojis, setFloatingEmojis] = useState<Array<{ id: number; emoji: string; x: number }>>([]);
   const usedTextIds   = useRef<string[]>([]);
   const shownMilestones = useRef<Set<number>>(new Set());
+  const boardRef = useRef<GeneratedBoard>(generateRandomBoard(level));
 
   const players = [{ id: "solo", name: playerName, position, score, color: PLAYER_COLOR, bonusRolls: 0, isConnected: true, streak }];
 
@@ -141,8 +130,8 @@ export default function SoloPractice() {
     }
 
     const dice    = pendingDice ?? 1;
-    const snakes  = getSnakes(level);
-    const ladders = getLadders(level);
+    const snakes  = boardRef.current.snakes;
+    const ladders = boardRef.current.ladders;
 
     let newPos  = Math.min(position + dice, 100);
     let event: BoardEvent = { type: "none", from: newPos, to: newPos };
@@ -252,6 +241,7 @@ export default function SoloPractice() {
     setHistory([]);
     usedTextIds.current = [];
     shownMilestones.current = new Set();
+    boardRef.current = generateRandomBoard(level);
   };
 
   const levelLabel = level === 1 ? "Level 1 — MCQ" : level === 2 ? "Level 2 — Hard MCQ" : "Level 3 — Matching";
@@ -299,6 +289,8 @@ export default function SoloPractice() {
               padding: "6px",
             }}>
             <Board players={players} level={level}
+              snakes={boardRef.current.snakes}
+              ladders={boardRef.current.ladders}
               animatingPlayerId={animatingPlayerId}
               animationPath={animationPath}
               boardEvent={boardEventState}

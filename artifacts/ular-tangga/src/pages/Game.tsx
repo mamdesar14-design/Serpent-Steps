@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { getSocket } from "@/lib/socket";
 import {
   getRandomText, getRandomLevel3Text, ExplanationText, Level3ExplanationText,
-  SNAKES_LEVEL1, LADDERS_LEVEL1, SNAKES_LEVEL2, LADDERS_LEVEL2, SNAKES_LEVEL3, LADDERS_LEVEL3,
 } from "@/lib/gameData";
 import Board from "@/components/Board";
 import Dice from "@/components/Dice";
@@ -40,6 +39,8 @@ type GameState = {
   awaitingAnswer: boolean;
   pendingDiceValue: number | null;
   lastEvent: string | null;
+  boardSnakes?: Record<number, number>;
+  boardLadders?: Record<number, number | { to: number; reward: { type: string; value: number; description: string } }>;
 };
 
 export default function Game() {
@@ -176,10 +177,9 @@ export default function Game() {
         const prevPos = gameState?.players.find((p) => p.id === playerId)?.position ?? 0;
 
         // Detect snake/ladder trigger square to split walk path from teleport animation
-        const snakesMap: Record<number, number> =
-          level === 3 ? SNAKES_LEVEL3 : level === 2 ? SNAKES_LEVEL2 : SNAKES_LEVEL1;
+        const snakesMap: Record<number, number> = game.boardSnakes ?? {};
         const laddersMap: Record<number, number | { to: number; reward: { type: string } }> =
-          level === 3 ? LADDERS_LEVEL3 : level === 2 ? LADDERS_LEVEL2 : LADDERS_LEVEL1;
+          (game.boardLadders ?? {}) as Record<number, number | { to: number; reward: { type: string } }>;
 
         let walkEnd = newPosition;
         let evt: import("@/components/Board").TokenBoardEvent = null;
@@ -464,6 +464,8 @@ export default function Game() {
             <Board
               players={gameState.players}
               level={level}
+              snakes={gameState.boardSnakes ?? {}}
+              ladders={gameState.boardLadders ?? {}}
               animatingPlayerId={animatingPlayerId}
               animationPath={animationPath}
               boardEvent={boardEvent}
